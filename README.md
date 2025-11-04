@@ -40,3 +40,6 @@ The primary purpose of **MissionConnect** is to provide a digital solution for L
 - **Map Integration**: Google Maps API or Mapbox for mapping and location services.
 - **Authentication**: JWT (JSON Web Tokens) for secure user authentication.
 
+## Ignacio Favorite quote
+
+2 Nefi 2:25: "Adam fell that men might be; and men are, that they might have joy."
