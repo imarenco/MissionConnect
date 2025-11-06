@@ -43,3 +43,6 @@ The primary purpose of **MissionConnect** is to provide a digital solution for L
 ## Ignacio Favorite quote
 
 2 Nefi 2:25: "Adam fell that men might be; and men are, that they might have joy."
+
+## Chandler Favorite quote
+"I can do this all day." - Captain America
