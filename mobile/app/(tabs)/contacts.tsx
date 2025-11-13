@@ -35,6 +35,7 @@ export default function ContactsScreen() {
   const loadContacts = useCallback(async () => {
     try {
       const data = await contactsApi.getAll();
+<<<<<<< HEAD
       // normalize to have ._id and .id aliases
       const normalized = (data || []).map((c: any) => ({
         ...c,
@@ -43,6 +44,10 @@ export default function ContactsScreen() {
       }));
       setContacts(normalized);
       setFilteredContacts(normalized);
+=======
+      setContacts(data);
+      setFilteredContacts(data);
+>>>>>>> origin/main
     } catch (error) {
       Alert.alert('Error', 'Failed to load contacts');
     }
@@ -54,12 +59,20 @@ export default function ContactsScreen() {
 
   useEffect(() => {
     if (searchQuery.trim()) {
+<<<<<<< HEAD
       const q = searchQuery.toLowerCase();
       const filtered = contacts.filter(
         (contact) =>
           (contact.firstName || '').toLowerCase().includes(q) ||
           (contact.lastName || '').toLowerCase().includes(q) ||
           `${contact.firstName || ''} ${contact.lastName || ''}`.toLowerCase().includes(q)
+=======
+      const filtered = contacts.filter(
+        (contact) =>
+          contact.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          contact.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          `${contact.firstName} ${contact.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())
+>>>>>>> origin/main
       );
       setFilteredContacts(filtered);
     } else {
@@ -84,7 +97,11 @@ export default function ContactsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
+<<<<<<< HEAD
               await contactsApi.delete(contact._id || contact.id);
+=======
+              await contactsApi.delete(contact.id);
+>>>>>>> origin/main
               await loadContacts();
             } catch (error) {
               Alert.alert('Error', 'Failed to delete contact');
@@ -103,12 +120,20 @@ export default function ContactsScreen() {
           backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
         },
       ]}
+<<<<<<< HEAD
       onPress={() => router.push(`/contact-detail/${item._id || item.id}`)}>
+=======
+      onPress={() => router.push(`/contact-detail/${item.id}`)}>
+>>>>>>> origin/main
       <View style={styles.contactInfo}>
         <ThemedText type="defaultSemiBold" style={styles.contactName}>
           {item.firstName} {item.lastName}
         </ThemedText>
+<<<<<<< HEAD
         <ThemedText style={styles.contactPhone}>{item.phone || item.phoneNumber}</ThemedText>
+=======
+        <ThemedText style={styles.contactPhone}>{item.phoneNumber}</ThemedText>
+>>>>>>> origin/main
         <ThemedText style={styles.contactAddress}>{item.address}</ThemedText>
       </View>
       <TouchableOpacity
@@ -160,7 +185,11 @@ export default function ContactsScreen() {
       <FlatList
         data={filteredContacts}
         renderItem={renderContact}
+<<<<<<< HEAD
         keyExtractor={(item) => item._id || item.id}
+=======
+        keyExtractor={(item) => item.id}
+>>>>>>> origin/main
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -273,3 +302,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
   },
 });
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/main
