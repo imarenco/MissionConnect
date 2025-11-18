@@ -6,6 +6,7 @@ import { connectDB } from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
 import visitRoutes from './routes/visitRoutes.js';
+import locationRoutes from './routes/locationRoutes.js';
 
 dotenv.config();
 connectDB();
@@ -18,6 +19,7 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/contacts", contactRoutes);
 app.use('/api/visits', visitRoutes);
+app.use('/api/locations', locationRoutes);
 
 // Root route for status check
 app.get("/", (req, res) => {
@@ -27,7 +29,8 @@ app.get("/", (req, res) => {
     endpoints: {
       auth: "/api/auth",
       contacts: "/api/contacts",
-      visits: "/api/visits"
+      visits: "/api/visits",
+      locations: "/api/locations"
     }
   });
 });
