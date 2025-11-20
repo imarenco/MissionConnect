@@ -59,3 +59,21 @@ export const getVisits = async (req, res) => {
     return res.status(500).json({ message: error.message || 'Server error' });
   }
 };
+
+export const deleteVisit = async (req, res) => {
+  try {
+    const userId = req.user?._id || req.user?.id || req.user;
+    const visitId = req.params.id;
+
+    const visit = await Visit.findOne({ _id: visitId, user: userId });
+    if (!visit) {
+      return res.status(404).json({ message: 'Visit not found' });
+    }
+
+    await Visit.deleteOne({ _id: visitId });
+    return res.status(200).json({ message: 'Visit deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting visit:', error);
+    return res.status(500).json({ message: error.message || 'Server error' });
+  }
+};

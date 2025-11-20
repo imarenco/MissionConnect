@@ -1,105 +1,44 @@
-<<<<<<< HEAD
-// app/(tabs)/contact-detail/[id].tsx
-import { useCallback, useEffect, useState } from 'react';
-=======
 import { useState, useEffect, useCallback } from 'react';
->>>>>>> origin/main
 import {
   View,
   StyleSheet,
   ScrollView,
-<<<<<<< HEAD
-  TouchableOpacity,
-  Alert,
-=======
   TextInput,
   TouchableOpacity,
   Alert,
   FlatList,
->>>>>>> origin/main
   ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-<<<<<<< HEAD
+import { contactsApi, notesApi, Contact, Note } from '@/services/api';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { contactsApi } from '@/services/mockApi';
-
-interface Contact {
-  _id?: string;
-  id?: string;
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
-  phoneNumber?: string;
-  address?: string;
-  [key: string]: any;
-}
-=======
-import { contactsApi, notesApi, Contact, Note } from '@/services/mockApi';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
->>>>>>> origin/main
 
 export default function ContactDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [contact, setContact] = useState<Contact | null>(null);
-<<<<<<< HEAD
-  const [loading, setLoading] = useState(true);
-=======
   const [notes, setNotes] = useState<Note[]>([]);
   const [newNote, setNewNote] = useState('');
   const [loading, setLoading] = useState(true);
   const [addingNote, setAddingNote] = useState(false);
->>>>>>> origin/main
   const router = useRouter();
   const colorScheme = useColorScheme();
 
   const loadContact = useCallback(async () => {
-<<<<<<< HEAD
-    if (!id) {
-      setContact(null);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const data = await contactsApi.getById(id);
-      if (!data) {
-        setContact(null);
-      } else {
-        // normalize id/_id so the rest of the app can use either
-        const normalized = { ...(data || {}), id: data._id || data.id, _id: data._id || data.id };
-        setContact(normalized);
-      }
-    } catch (err: any) {
-      console.error('loadContact error', err);
-      // if server returned a message, surface it
-      const msg = err?.message || 'Failed to load contact';
-      Alert.alert('Error', msg);
-      setContact(null);
-=======
     if (!id) return;
     try {
       const data = await contactsApi.getById(id);
       setContact(data);
     } catch (error) {
       Alert.alert('Error', 'Failed to load contact');
->>>>>>> origin/main
     } finally {
       setLoading(false);
     }
   }, [id]);
 
-<<<<<<< HEAD
-  useEffect(() => {
-    loadContact();
-  }, [loadContact]);
-=======
   const loadNotes = useCallback(async () => {
     if (!id) return;
     try {
@@ -161,7 +100,6 @@ export default function ContactDetailScreen() {
       minute: '2-digit',
     });
   };
->>>>>>> origin/main
 
   if (loading) {
     return (
@@ -189,24 +127,13 @@ export default function ContactDetailScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <IconSymbol name="chevron.left" size={24} color={Colors[colorScheme ?? 'light'].text} />
         </TouchableOpacity>
-<<<<<<< HEAD
-        <ThemedText type="title" style={styles.title}>Contact Details</ThemedText>
-=======
         <ThemedText type="title" style={styles.title}>
           Contact Details
         </ThemedText>
->>>>>>> origin/main
         <View style={styles.backButton} />
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-<<<<<<< HEAD
-        <View style={[styles.contactCard, { backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5' }]}>
-          <View style={styles.contactHeader}>
-            <View style={styles.avatar}>
-              <ThemedText style={styles.avatarText}>
-                {(contact.firstName?.[0] || '') + (contact.lastName?.[0] || '')}
-=======
         <View
           style={[
             styles.contactCard,
@@ -218,7 +145,6 @@ export default function ContactDetailScreen() {
             <View style={styles.avatar}>
               <ThemedText style={styles.avatarText}>
                 {contact.firstName[0]}{contact.lastName[0]}
->>>>>>> origin/main
               </ThemedText>
             </View>
             <View style={styles.contactNameContainer}>
@@ -231,11 +157,7 @@ export default function ContactDetailScreen() {
           <View style={styles.contactInfo}>
             <View style={styles.infoRow}>
               <IconSymbol name="phone.fill" size={20} color={Colors[colorScheme ?? 'light'].tint} />
-<<<<<<< HEAD
-              <ThemedText style={styles.infoText}>{contact.phone || contact.phoneNumber || '—'}</ThemedText>
-=======
               <ThemedText style={styles.infoText}>{contact.phoneNumber}</ThemedText>
->>>>>>> origin/main
             </View>
 
             {contact.address && (
@@ -244,24 +166,6 @@ export default function ContactDetailScreen() {
                 <ThemedText style={styles.infoText}>{contact.address}</ThemedText>
               </View>
             )}
-<<<<<<< HEAD
-
-            {/* Render any extra fields if present (non-destructive) */}
-            {contact.gender && (
-              <View style={styles.infoRow}>
-                <IconSymbol name="person" size={20} color={Colors[colorScheme ?? 'light'].tint} />
-                <ThemedText style={styles.infoText}>{contact.gender}</ThemedText>
-              </View>
-            )}
-            {typeof contact.tags !== 'undefined' && Array.isArray(contact.tags) && contact.tags.length > 0 && (
-              <View style={styles.infoRow}>
-                <IconSymbol name="tag" size={20} color={Colors[colorScheme ?? 'light'].tint} />
-                <ThemedText style={styles.infoText}>{contact.tags.join(', ')}</ThemedText>
-              </View>
-            )}
-          </View>
-        </View>
-=======
           </View>
         </View>
 
@@ -339,32 +243,12 @@ export default function ContactDetailScreen() {
             }
           />
         </View>
->>>>>>> origin/main
       </ScrollView>
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-<<<<<<< HEAD
-  container: { flex: 1 },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 60 },
-  backButton: { width: 32, height: 32, justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 24 },
-  content: { flex: 1 },
-  contentContainer: { padding: 20, gap: 24 },
-  contactCard: { padding: 20, borderRadius: 12 },
-  contactHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, gap: 16 },
-  avatar: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#0a7ea4', justifyContent: 'center', alignItems: 'center' },
-  avatarText: { fontSize: 24, fontWeight: 'bold', color: '#fff' },
-  contactNameContainer: { flex: 1 },
-  contactName: { fontSize: 24 },
-  contactInfo: { gap: 12 },
-  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  infoText: { fontSize: 16, flex: 1 },
-});
-=======
   container: {
     flex: 1,
   },
@@ -491,4 +375,3 @@ const styles = StyleSheet.create({
   },
 });
 
->>>>>>> origin/main

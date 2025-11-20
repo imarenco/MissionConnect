@@ -12,7 +12,7 @@ import { useRouter } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { contactsApi, Contact } from '@/services/mockApi';
+import { contactsApi, Contact } from '@/services/api';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -35,20 +35,9 @@ export default function ContactsScreen() {
   const loadContacts = useCallback(async () => {
     try {
       const data = await contactsApi.getAll();
-<<<<<<< HEAD
-      // normalize to have ._id and .id aliases
-      const normalized = (data || []).map((c: any) => ({
-        ...c,
-        id: c._id || c.id,
-        _id: c._id || c.id,
-      }));
-      setContacts(normalized);
-      setFilteredContacts(normalized);
-=======
       setContacts(data);
       setFilteredContacts(data);
->>>>>>> origin/main
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to load contacts');
     }
   }, []);
@@ -59,20 +48,11 @@ export default function ContactsScreen() {
 
   useEffect(() => {
     if (searchQuery.trim()) {
-<<<<<<< HEAD
-      const q = searchQuery.toLowerCase();
-      const filtered = contacts.filter(
-        (contact) =>
-          (contact.firstName || '').toLowerCase().includes(q) ||
-          (contact.lastName || '').toLowerCase().includes(q) ||
-          `${contact.firstName || ''} ${contact.lastName || ''}`.toLowerCase().includes(q)
-=======
       const filtered = contacts.filter(
         (contact) =>
           contact.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
           contact.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
           `${contact.firstName} ${contact.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())
->>>>>>> origin/main
       );
       setFilteredContacts(filtered);
     } else {
@@ -86,62 +66,98 @@ export default function ContactsScreen() {
     setRefreshing(false);
   };
 
-  const handleDelete = (contact: Contact) => {
-    Alert.alert(
-      'Delete Contact',
-      `Are you sure you want to delete ${contact.firstName} ${contact.lastName}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-<<<<<<< HEAD
-              await contactsApi.delete(contact._id || contact.id);
-=======
-              await contactsApi.delete(contact.id);
->>>>>>> origin/main
-              await loadContacts();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete contact');
-            }
+  const handleDelete = async (contact: Contact) => {
+    console.log('Delete button pressed for contact:', contact.firstName, contact.lastName);
+    console.log('Full contact object:', JSON.stringify(contact, null, 2));
+    
+    const contactId = contact.id || contact._id;
+    console.log('Contact ID:', contactId);
+    
+    if (!contactId) {
+      console.error('Contact ID not found:', contact);
+      Alert.alert('Error', 'Contact ID not found');
+      return;
+    }
+
+    console.log('Showing delete confirmation for ID:', contactId);
+    
+    // Use confirm for web compatibility, Alert.alert for native
+    const confirmed = window.confirm
+      ? window.confirm(`Are you sure you want to delete ${contact.firstName} ${contact.lastName}?`)
+      : true; // For native, will use Alert.alert
+    
+    if (window.confirm) {
+      // Web platform - use confirm
+      if (confirmed) {
+        try {
+          console.log('Deleting contact with ID:', contactId);
+          await contactsApi.delete(contactId);
+          console.log('Contact deleted successfully');
+          await loadContacts();
+        } catch (error: any) {
+          console.error('Delete error:', error);
+          Alert.alert('Error', error.message || 'Failed to delete contact');
+        }
+      } else {
+        console.log('Delete cancelled by user');
+      }
+    } else {
+      // Native platform - use Alert.alert
+      Alert.alert(
+        'Delete Contact',
+        `Are you sure you want to delete ${contact.firstName} ${contact.lastName}?`,
+        [
+          { text: 'Cancel', style: 'cancel', onPress: () => console.log('Delete cancelled') },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                console.log('Deleting contact with ID:', contactId);
+                await contactsApi.delete(contactId);
+                console.log('Contact deleted successfully');
+                await loadContacts();
+              } catch (error: any) {
+                console.error('Delete error:', error);
+                Alert.alert('Error', error.message || 'Failed to delete contact');
+              }
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const renderContact = ({ item }: { item: Contact }) => (
-    <TouchableOpacity
+    <View
       style={[
         styles.contactItem,
         {
           backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
         },
-      ]}
-<<<<<<< HEAD
-      onPress={() => router.push(`/contact-detail/${item._id || item.id}`)}>
-=======
-      onPress={() => router.push(`/contact-detail/${item.id}`)}>
->>>>>>> origin/main
-      <View style={styles.contactInfo}>
-        <ThemedText type="defaultSemiBold" style={styles.contactName}>
-          {item.firstName} {item.lastName}
-        </ThemedText>
-<<<<<<< HEAD
-        <ThemedText style={styles.contactPhone}>{item.phone || item.phoneNumber}</ThemedText>
-=======
-        <ThemedText style={styles.contactPhone}>{item.phoneNumber}</ThemedText>
->>>>>>> origin/main
-        <ThemedText style={styles.contactAddress}>{item.address}</ThemedText>
-      </View>
+      ]}>
       <TouchableOpacity
-        onPress={() => handleDelete(item)}
-        style={styles.deleteButton}>
+        style={styles.contactInfoContainer}
+        onPress={() => router.push(`/contact-detail/${item.id || item._id}`)}
+        activeOpacity={0.7}>
+        <View style={styles.contactInfo}>
+          <ThemedText type="defaultSemiBold" style={styles.contactName}>
+            {item.firstName} {item.lastName}
+          </ThemedText>
+          <ThemedText style={styles.contactPhone}>{item.phoneNumber}</ThemedText>
+          <ThemedText style={styles.contactAddress}>{item.address}</ThemedText>
+        </View>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => {
+          console.log('Delete button onPress triggered');
+          handleDelete(item);
+        }}
+        style={styles.deleteButton}
+        activeOpacity={0.7}>
         <IconSymbol name="trash" size={20} color="#ff3b30" />
       </TouchableOpacity>
-    </TouchableOpacity>
+    </View>
   );
 
   return (
@@ -185,11 +201,7 @@ export default function ContactsScreen() {
       <FlatList
         data={filteredContacts}
         renderItem={renderContact}
-<<<<<<< HEAD
-        keyExtractor={(item) => item._id || item.id}
-=======
-        keyExtractor={(item) => item.id}
->>>>>>> origin/main
+        keyExtractor={(item) => item.id || item._id || Math.random().toString()}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -259,6 +271,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 12,
   },
+  contactInfoContainer: {
+    flex: 1,
+  },
   contactInfo: {
     flex: 1,
   },
@@ -302,7 +317,3 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
   },
 });
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/main

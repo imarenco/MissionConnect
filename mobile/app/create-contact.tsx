@@ -1,9 +1,4 @@
-<<<<<<< HEAD
-// mobile/app/create-contact.tsx
 import React, { useState } from 'react';
-=======
-import { useState } from 'react';
->>>>>>> origin/main
 import {
   View,
   StyleSheet,
@@ -17,7 +12,7 @@ import { useRouter } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { contactsApi } from '@/services/mockApi';
+import { contactsApi } from '@/services/api';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -35,13 +30,10 @@ export default function CreateContactScreen() {
       Alert.alert('Validation Error', 'First name is required');
       return false;
     }
-<<<<<<< HEAD
-=======
     if (!lastName.trim()) {
       Alert.alert('Validation Error', 'Last name is required');
       return false;
     }
->>>>>>> origin/main
     if (!phoneNumber.trim()) {
       Alert.alert('Validation Error', 'Phone number is required');
       return false;
@@ -50,40 +42,23 @@ export default function CreateContactScreen() {
   };
 
   const handleCreate = async () => {
-<<<<<<< HEAD
     if (!validateForm()) return;
-=======
-    if (!validateForm()) {
-      return;
-    }
-
->>>>>>> origin/main
     setLoading(true);
     try {
       await contactsApi.create({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         address: address.trim(),
+        phone: phoneNumber.trim(),
         phoneNumber: phoneNumber.trim(),
       });
-      Alert.alert('Success', 'Contact created successfully!', [
-<<<<<<< HEAD
-        { text: 'OK', onPress: () => router.back() },
-      ]);
-    } catch (err: any) {
-      console.error('Create contact error', err);
-      Alert.alert('Error', err.message || 'Failed to create contact');
-=======
-        {
-          text: 'OK',
-          onPress: () => router.back(),
-        },
-      ]);
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to create contact. Please try again.');
->>>>>>> origin/main
-    } finally {
+      // Reset loading state before navigation
       setLoading(false);
+      // Navigate back immediately after successful creation
+      router.back();
+    } catch (error: any) {
+      setLoading(false);
+      Alert.alert('Error', error.message || 'Failed to create contact. Please try again.');
     }
   };
 
@@ -102,12 +77,6 @@ export default function CreateContactScreen() {
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         <View style={styles.form}>
           <View style={styles.inputContainer}>
-<<<<<<< HEAD
-            <ThemedText style={styles.label}>First Name *</ThemedText>
-            <TextInput
-              style={[styles.input, { backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5', color: Colors[colorScheme ?? 'light'].text }]}
-              placeholder="First name"
-=======
             <ThemedText style={styles.label}>
               First Name <ThemedText style={styles.required}>*</ThemedText>
             </ThemedText>
@@ -120,7 +89,6 @@ export default function CreateContactScreen() {
                 },
               ]}
               placeholder="Enter first name"
->>>>>>> origin/main
               placeholderTextColor={colorScheme === 'dark' ? '#888' : '#999'}
               value={firstName}
               onChangeText={setFirstName}
@@ -129,12 +97,6 @@ export default function CreateContactScreen() {
           </View>
 
           <View style={styles.inputContainer}>
-<<<<<<< HEAD
-            <ThemedText style={styles.label}>Last Name</ThemedText>
-            <TextInput
-              style={[styles.input, { backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5', color: Colors[colorScheme ?? 'light'].text }]}
-              placeholder="Last name"
-=======
             <ThemedText style={styles.label}>
               Last Name <ThemedText style={styles.required}>*</ThemedText>
             </ThemedText>
@@ -147,7 +109,6 @@ export default function CreateContactScreen() {
                 },
               ]}
               placeholder="Enter last name"
->>>>>>> origin/main
               placeholderTextColor={colorScheme === 'dark' ? '#888' : '#999'}
               value={lastName}
               onChangeText={setLastName}
@@ -156,12 +117,6 @@ export default function CreateContactScreen() {
           </View>
 
           <View style={styles.inputContainer}>
-<<<<<<< HEAD
-            <ThemedText style={styles.label}>Phone Number *</ThemedText>
-            <TextInput
-              style={[styles.input, { backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5', color: Colors[colorScheme ?? 'light'].text }]}
-              placeholder="Phone number"
-=======
             <ThemedText style={styles.label}>
               Phone Number <ThemedText style={styles.required}>*</ThemedText>
             </ThemedText>
@@ -174,7 +129,6 @@ export default function CreateContactScreen() {
                 },
               ]}
               placeholder="Enter phone number"
->>>>>>> origin/main
               placeholderTextColor={colorScheme === 'dark' ? '#888' : '#999'}
               value={phoneNumber}
               onChangeText={setPhoneNumber}
@@ -185,10 +139,6 @@ export default function CreateContactScreen() {
           <View style={styles.inputContainer}>
             <ThemedText style={styles.label}>Address</ThemedText>
             <TextInput
-<<<<<<< HEAD
-              style={[styles.input, styles.textArea, { backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5', color: Colors[colorScheme ?? 'light'].text }]}
-              placeholder="Address"
-=======
               style={[
                 styles.input,
                 styles.textArea,
@@ -198,7 +148,6 @@ export default function CreateContactScreen() {
                 },
               ]}
               placeholder="Enter address"
->>>>>>> origin/main
               placeholderTextColor={colorScheme === 'dark' ? '#888' : '#999'}
               value={address}
               onChangeText={setAddress}
@@ -210,10 +159,6 @@ export default function CreateContactScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-<<<<<<< HEAD
-        <TouchableOpacity style={[styles.button, { backgroundColor: Colors[colorScheme ?? 'light'].tint, opacity: loading ? 0.6 : 1 }]} onPress={handleCreate} disabled={loading}>
-          {loading ? <ActivityIndicator color="#fff" /> : <ThemedText style={styles.buttonText}>Create Contact</ThemedText>}
-=======
         <TouchableOpacity
           style={[
             styles.button,
@@ -229,7 +174,6 @@ export default function CreateContactScreen() {
           ) : (
             <ThemedText style={styles.buttonText}>Create Contact</ThemedText>
           )}
->>>>>>> origin/main
         </TouchableOpacity>
       </View>
     </ThemedView>
@@ -237,24 +181,6 @@ export default function CreateContactScreen() {
 }
 
 const styles = StyleSheet.create({
-<<<<<<< HEAD
-  container: { flex: 1 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 60 },
-  closeButton: { width: 32, height: 32, justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 24 },
-  content: { flex: 1 },
-  contentContainer: { padding: 20 },
-  form: { gap: 20 },
-  inputContainer: { gap: 8 },
-  label: { fontSize: 16, fontWeight: '600' },
-  required: { color: '#ff3b30' },
-  input: { padding: 12, borderRadius: 8, fontSize: 16 },
-  textArea: { minHeight: 80, textAlignVertical: 'top' },
-  footer: { padding: 20, paddingBottom: 40, borderTopWidth: 1, borderTopColor: '#e0e0e0' },
-  button: { padding: 16, borderRadius: 8, alignItems: 'center' },
-  buttonText: { fontSize: 18, fontWeight: '600', color: '#fff' },
-});
-=======
   container: {
     flex: 1,
   },
@@ -320,4 +246,3 @@ const styles = StyleSheet.create({
   },
 });
 
->>>>>>> origin/main

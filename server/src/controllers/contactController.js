@@ -103,3 +103,69 @@ export const getContactById = async (req, res) => {
     return res.status(500).json({ message: "Server error fetching contact" });
   }
 };
+
+/**
+ * PUT /api/contacts/:id
+ * Update a contact if it belongs to the logged-in user.
+ */
+export const updateContact = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const contactId = req.params.id;
+    if (!contactId) return res.status(400).json({ message: "Contact id required" });
+
+    const contact = await Contact.findOne({
+      _id: contactId,
+      $or: [{ owner: userId }, { missionary: userId }],
+    });
+
+    if (!contact) {
+      return res.status(404).json({ message: "Contact not found" });
+    }
+
+    // Update allowed fields
+    const allowedFields = ['firstName', 'lastName', 'phone', 'address', 'lat', 'lng', 'age', 'gender', 'language', 'tags', 'baptismDate', 'progress', 'nextAppointment', 'notesSummary'];
+    allowedFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        contact[field] = req.body[field];
+      }
+    });
+
+    await contact.save();
+    return res.status(200).json(contact);
+  } catch (error) {
+    console.error("Error updating contact:", error);
+    return res.status(500).json({ message: "Server error updating contact" });
+  }
+};
+
+/**
+ * DELETE /api/contacts/:id
+ * Delete a contact if it belongs to the logged-in user.
+ */
+export const deleteContact = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const contactId = req.params.id;
+    if (!contactId) return res.status(400).json({ message: "Contact id required" });
+
+    const contact = await Contact.findOne({
+      _id: contactId,
+      $or: [{ owner: userId }, { missionary: userId }],
+    });
+
+    if (!contact) {
+      return res.status(404).json({ message: "Contact not found" });
+    }
+
+    await Contact.deleteOne({ _id: contactId });
+    return res.status(200).json({ message: "Contact deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting contact:", error);
+    return res.status(500).json({ message: "Server error deleting contact" });
+  }
+};
