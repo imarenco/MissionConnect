@@ -16,6 +16,8 @@ import { contactsApi, Contact } from '@/services/api';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/contexts/AuthContext';
+import MapView, { Marker } from 'react-native-maps';
+
 
 export default function ContactsScreen() {
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -136,29 +138,56 @@ export default function ContactsScreen() {
           backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
         },
       ]}>
+      
       <TouchableOpacity
         style={styles.contactInfoContainer}
         onPress={() => router.push(`/contact-detail/${item.id || item._id}`)}
         activeOpacity={0.7}>
+
         <View style={styles.contactInfo}>
           <ThemedText type="defaultSemiBold" style={styles.contactName}>
             {item.firstName} {item.lastName}
           </ThemedText>
+
           <ThemedText style={styles.contactPhone}>{item.phoneNumber}</ThemedText>
           <ThemedText style={styles.contactAddress}>{item.address}</ThemedText>
+
+          {/* MAP PREVIEW */}
+          {item.lat && item.lng && (
+            <View style={styles.mapContainer}>
+              <MapView
+                style={styles.map}
+                pointerEvents="none"
+                initialRegion={{
+                  latitude: item.lat,
+                  longitude: item.lng,
+                  latitudeDelta: 0.01,
+                  longitudeDelta: 0.01,
+                }}
+              >
+                <Marker
+                  coordinate={{
+                    latitude: item.lat,
+                    longitude: item.lng,
+                  }}
+                />
+              </MapView>
+            </View>
+          )}
+
         </View>
       </TouchableOpacity>
+
+      {/* Delete Button */}
       <TouchableOpacity
-        onPress={() => {
-          console.log('Delete button onPress triggered');
-          handleDelete(item);
-        }}
+        onPress={() => handleDelete(item)}
         style={styles.deleteButton}
         activeOpacity={0.7}>
         <IconSymbol name="trash" size={20} color="#ff3b30" />
       </TouchableOpacity>
     </View>
   );
+
 
   return (
     <ThemedView style={styles.container}>
@@ -292,6 +321,16 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     padding: 8,
+  },
+  mapContainer: {
+  marginTop: 10,
+  height: 150,
+  width: '100%',
+  borderRadius: 8,
+  overflow: 'hidden',
+  },
+  map: {
+    flex: 1,
   },
   emptyContainer: {
     padding: 40,
