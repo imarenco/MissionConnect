@@ -44,6 +44,7 @@ export default function ScheduleVisitScreen() {
   };
 
   const handleSchedule = async () => {
+    // Validation
     if (!selectedContactId) {
       Alert.alert('Validation Error', 'Please select a contact');
       return;
@@ -57,6 +58,28 @@ export default function ScheduleVisitScreen() {
       return;
     }
 
+    // Validate date format (YYYY-MM-DD)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(date.trim())) {
+      Alert.alert('Validation Error', 'Please enter a valid date in YYYY-MM-DD format');
+      return;
+    }
+
+    // Validate time format (HH:MM)
+    const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!timeRegex.test(time.trim())) {
+      Alert.alert('Validation Error', 'Please enter a valid time in HH:MM format (24-hour)');
+      return;
+    }
+
+    // Validate that the date is not in the past
+    const visitDateTime = new Date(`${date.trim()}T${time.trim()}:00`);
+    const now = new Date();
+    if (visitDateTime < now) {
+      Alert.alert('Validation Error', 'Please select a date and time in the future');
+      return;
+    }
+
     setLoading(true);
     try {
       await visitsApi.create({
@@ -65,16 +88,14 @@ export default function ScheduleVisitScreen() {
         time: time.trim(),
         notes: notes.trim(),
       } as any);
-      Alert.alert('Success', 'Visit scheduled successfully!', [
-        {
-          text: 'OK',
-          onPress: () => router.back(),
-        },
-      ]);
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to schedule visit. Please try again.');
-    } finally {
+
+      // Reset loading state before navigation
       setLoading(false);
+      // Navigate back immediately after successful creation
+      router.back();
+    } catch (error: any) {
+      setLoading(false);
+      Alert.alert('Error', error.message || 'Failed to schedule visit. Please try again.');
     }
   };
 

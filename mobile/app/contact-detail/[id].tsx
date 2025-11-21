@@ -8,6 +8,7 @@ import {
   Alert,
   FlatList,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
@@ -32,7 +33,7 @@ export default function ContactDetailScreen() {
     try {
       const data = await contactsApi.getById(id);
       setContact(data);
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to load contact');
     } finally {
       setLoading(false);
@@ -44,7 +45,7 @@ export default function ContactDetailScreen() {
     try {
       const data = await notesApi.getByContactId(id);
       setNotes(data);
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to load notes');
     }
   }, [id]);
@@ -65,29 +66,53 @@ export default function ContactDetailScreen() {
       await notesApi.create(id, newNote.trim());
       setNewNote('');
       await loadNotes();
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to add note');
     } finally {
       setAddingNote(false);
     }
   };
 
-  const handleDeleteNote = (noteId: string) => {
-    Alert.alert('Delete Note', 'Are you sure you want to delete this note?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await notesApi.delete(noteId);
-            await loadNotes();
-          } catch (error) {
-            Alert.alert('Error', 'Failed to delete note');
-          }
+  const handleDeleteNote = async (note: Note) => {
+    const noteId = note.id || note._id;
+    
+    if (!noteId) {
+      Alert.alert('Error', 'Note ID not found');
+      return;
+    }
+    
+    // Use confirm for web compatibility, Alert.alert for native
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      // Web platform - use confirm
+      const confirmed = window.confirm('Are you sure you want to delete this note?');
+      if (confirmed) {
+        try {
+          await notesApi.delete(noteId);
+          // Refresh the notes list
+          await loadNotes();
+        } catch (error: any) {
+          Alert.alert('Error', error.message || 'Failed to delete note');
+        }
+      }
+    } else {
+      // Native platform - use Alert.alert
+      Alert.alert('Delete Note', 'Are you sure you want to delete this note?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await notesApi.delete(noteId);
+              // Refresh the notes list
+              await loadNotes();
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to delete note');
+            }
+          },
         },
-      },
-    ]);
+      ]);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -162,7 +187,7 @@ export default function ContactDetailScreen() {
 
             {contact.address && (
               <View style={styles.infoRow}>
-                <IconSymbol name="mappin.fill" size={20} color={Colors[colorScheme ?? 'light'].tint} />
+                <IconSymbol name="mappin" size={20} color={Colors[colorScheme ?? 'light'].tint} />
                 <ThemedText style={styles.infoText}>{contact.address}</ThemedText>
               </View>
             )}
@@ -228,13 +253,18 @@ export default function ContactDetailScreen() {
                   <ThemedText style={styles.noteDate}>{formatDate(item.createdAt)}</ThemedText>
                 </View>
                 <TouchableOpacity
-                  onPress={() => handleDeleteNote(item.id)}
-                  style={styles.deleteNoteButton}>
+                  onPress={() => {
+                    console.log('Delete button pressed for note:', item);
+                    handleDeleteNote(item);
+                  }}
+                  style={styles.deleteNoteButton}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                   <IconSymbol name="trash" size={18} color="#ff3b30" />
                 </TouchableOpacity>
               </View>
             )}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => item.id || item._id || Math.random().toString()}
             scrollEnabled={false}
             ListEmptyComponent={
               <View style={styles.emptyNotes}>
@@ -364,7 +394,11 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   deleteNoteButton: {
-    padding: 4,
+    padding: 8,
+    minWidth: 36,
+    minHeight: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   emptyNotes: {
     padding: 20,

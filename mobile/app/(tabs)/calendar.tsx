@@ -7,6 +7,7 @@ import {
   Alert,
   RefreshControl,
   ScrollView,
+  Platform,
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import { useRouter } from 'expo-router';
@@ -90,27 +91,52 @@ export default function CalendarScreen() {
     setRefreshing(false);
   };
 
-  const handleDelete = (visit: Visit) => {
-    if (!visit.id) return;
-    Alert.alert(
-      'Delete Visit',
-      `Are you sure you want to delete this visit with ${visit.contactName || 'contact'}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await visitsApi.delete(visit.id!);
-              await loadVisits();
-            } catch {
-              Alert.alert('Error', 'Failed to delete visit');
-            }
+  const handleDelete = async (visit: Visit) => {
+    const visitId = visit.id || visit._id;
+    
+    if (!visitId) {
+      Alert.alert('Error', 'Visit ID not found');
+      return;
+    }
+
+    const contactName = visit.contactName || 'contact';
+
+    // Use confirm for web compatibility, Alert.alert for native
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      // Web platform - use confirm
+      const confirmed = window.confirm(
+        `Are you sure you want to delete this visit with ${contactName}?`
+      );
+      if (confirmed) {
+        try {
+          await visitsApi.delete(visitId);
+          await loadVisits();
+        } catch (error: any) {
+          Alert.alert('Error', error.message || 'Failed to delete visit');
+        }
+      }
+    } else {
+      // Native platform - use Alert.alert
+      Alert.alert(
+        'Delete Visit',
+        `Are you sure you want to delete this visit with ${contactName}?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await visitsApi.delete(visitId);
+                await loadVisits();
+              } catch (error: any) {
+                Alert.alert('Error', error.message || 'Failed to delete visit');
+              }
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -146,7 +172,9 @@ export default function CalendarScreen() {
           </ThemedText>
           <TouchableOpacity
             onPress={() => handleDelete(item)}
-            style={styles.deleteButton}>
+            style={styles.deleteButton}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <IconSymbol name="trash" size={18} color="#ff3b30" />
           </TouchableOpacity>
         </View>
@@ -311,7 +339,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   deleteButton: {
-    padding: 4,
+    padding: 8,
+    minWidth: 36,
+    minHeight: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   visitDateTime: {
     flexDirection: 'row',
