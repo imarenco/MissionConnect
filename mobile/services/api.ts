@@ -375,6 +375,42 @@ export const visitsApi = {
     return normalizeVisit(created);
   },
 
+  getById: async (id: string): Promise<Visit | null> => {
+    try {
+      const visit = await apiRequest<any>(`/visits/${id}`);
+      return normalizeVisit(visit);
+    } catch (error: any) {
+      if (error.message.includes('404') || error.message.includes('not found')) {
+        return null;
+      }
+      throw error;
+    }
+  },
+
+  getByContactId: async (contactId: string): Promise<Visit[]> => {
+    const visits = await apiRequest<any[]>(`/visits?contactId=${contactId}`);
+    return visits.map(normalizeVisit);
+  },
+
+  update: async (id: string, updates: Partial<Visit>): Promise<Visit> => {
+    // Convert date and time to datetime if both are provided
+    let datetime;
+    if (updates.date && updates.time) {
+      datetime = new Date(`${updates.date}T${updates.time}:00`).toISOString();
+    }
+
+    const payload: any = {};
+    if (datetime) payload.datetime = datetime;
+    if (updates.notes !== undefined) payload.notes = updates.notes;
+
+    const updated = await apiRequest<any>(`/visits/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+
+    return normalizeVisit(updated);
+  },
+
   delete: async (id: string): Promise<void> => {
     await apiRequest(`/visits/${id}`, {
       method: 'DELETE',

@@ -3,21 +3,34 @@ import { View, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator
 import { useRouter } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useAuth } from '@/contexts/AuthContext';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { isValidEmail } from '@/lib/validation';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { login } = useAuth();
   const colorScheme = useColorScheme();
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please enter both email and password');
+    if (!email.trim()) {
+      Alert.alert('Error', 'Please enter your email');
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+
+    if (!password.trim()) {
+      Alert.alert('Error', 'Please enter your password');
       return;
     }
 
@@ -58,25 +71,40 @@ export default function LoginScreen() {
               autoCapitalize="none"
               autoComplete="email"
             />
+            {email && !isValidEmail(email) && (
+              <ThemedText style={styles.errorText}>Please enter a valid email</ThemedText>
+            )}
           </View>
 
           <View style={styles.inputContainer}>
             <ThemedText style={styles.label}>Password</ThemedText>
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
-                  color: Colors[colorScheme ?? 'light'].text,
-                },
-              ]}
-              placeholder="Enter your password"
-              placeholderTextColor={colorScheme === 'dark' ? '#888' : '#999'}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-            />
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={[
+                  styles.input,
+                  styles.passwordInput,
+                  {
+                    backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
+                    color: Colors[colorScheme ?? 'light'].text,
+                  },
+                ]}
+                placeholder="Enter your password"
+                placeholderTextColor={colorScheme === 'dark' ? '#888' : '#999'}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.eyeButton}>
+                <IconSymbol
+                  name={showPassword ? 'eye.fill' : 'eye.slash.fill'}
+                  size={20}
+                  color={Colors[colorScheme ?? 'light'].icon}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
 
           <TouchableOpacity
@@ -136,6 +164,24 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     fontSize: 16,
+  },
+  passwordContainer: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  passwordInput: {
+    flex: 1,
+    paddingRight: 45,
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: 12,
+    padding: 8,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#ff3b30',
   },
   button: {
     padding: 16,

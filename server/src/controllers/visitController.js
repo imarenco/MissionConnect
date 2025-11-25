@@ -48,7 +48,15 @@ export const createVisit = async (req, res) => {
 export const getVisits = async (req, res) => {
   try {
     const userId = req.user?._id || req.user?.id || req.user;
-    const visits = await Visit.find({ user: userId })
+    const { contactId } = req.query;
+
+    // Build filter
+    const filter = { user: userId };
+    if (contactId) {
+      filter.contact = contactId;
+    }
+
+    const visits = await Visit.find(filter)
       .populate('contact', 'firstName lastName phone')
       .sort({ datetime: 1 })
       .lean();

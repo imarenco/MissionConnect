@@ -10,11 +10,11 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { contactsApi, notesApi, Contact, Note } from '@/services/api';
+import { contactsApi, notesApi, visitsApi, Contact, Note, Visit } from '@/services/api';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -22,6 +22,7 @@ export default function ContactDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [contact, setContact] = useState<Contact | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [visits, setVisits] = useState<Visit[]>([]);
   const [newNote, setNewNote] = useState('');
   const [loading, setLoading] = useState(true);
   const [addingNote, setAddingNote] = useState(false);
@@ -43,17 +44,38 @@ export default function ContactDetailScreen() {
   const loadNotes = useCallback(async () => {
     if (!id) return;
     try {
-      const data = await notesApi.getByContactId(id);
+      const contactId = Array.isArray(id) ? id[0] : id;
+      const data = await notesApi.getByContactId(contactId);
       setNotes(data);
-    } catch {
-      Alert.alert('Error', 'Failed to load notes');
+    } catch (error: any) {
+      console.error('Error loading notes:', error);
+      Alert.alert('Error', error.message || 'Failed to load notes');
+    }
+  }, [id]);
+
+  const loadVisits = useCallback(async () => {
+    if (!id) return;
+    try {
+      const contactId = Array.isArray(id) ? id[0] : id;
+      const data = await visitsApi.getByContactId(contactId);
+      setVisits(data);
+    } catch (error: any) {
+      console.error('Error loading visits:', error);
     }
   }, [id]);
 
   useEffect(() => {
     loadContact();
     loadNotes();
-  }, [loadContact, loadNotes]);
+    loadVisits();
+  }, [loadContact, loadNotes, loadVisits]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadNotes();
+      loadVisits();
+    }, [loadNotes, loadVisits])
+  );
 
   const handleAddNote = async () => {
     if (!newNote.trim() || !id) {
@@ -63,11 +85,13 @@ export default function ContactDetailScreen() {
 
     setAddingNote(true);
     try {
-      await notesApi.create(id, newNote.trim());
+      const contactId = Array.isArray(id) ? id[0] : id;
+      await notesApi.create(contactId, newNote.trim());
       setNewNote('');
       await loadNotes();
-    } catch {
-      Alert.alert('Error', 'Failed to add note');
+    } catch (error: any) {
+      console.error('Error adding note:', error);
+      Alert.alert('Error', error.message || 'Failed to add note');
     } finally {
       setAddingNote(false);
     }
@@ -123,6 +147,23 @@ export default function ContactDetailScreen() {
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+    });
+  };
+
+  const formatTime = (timeString: string) => {
+    const [hours, minutes] = timeString.split(':');
+    const hour = parseInt(hours, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${minutes} ${ampm}`;
+  };
+
+  const formatDateOnly = (dateString: string) => {
+    const date = new Date(dateString + 'T00:00:00');
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
     });
   };
 
@@ -273,6 +314,47 @@ export default function ContactDetailScreen() {
             }
           />
         </View>
+
+        <View style={styles.section}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>
+            Scheduled Visits
+          </ThemedText>
+
+          {visits.length > 0 ? (
+            <FlatList
+              data={visits}
+              renderItem={({ item }) => (
+                <View
+                  style={[
+                    styles.visitItem,
+                    {
+                      backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
+                    },
+                  ]}>
+                  <View style={styles.visitContent}>
+                  <View style={styles.visitHeader}>
+                    <ThemedText style={styles.visitDate}>
+                      {item.date ? formatDateOnly(item.date) : 'No date'}
+                    </ThemedText>
+                    <ThemedText style={styles.visitTime}>
+                      {item.time ? formatTime(item.time) : 'No time'}
+                    </ThemedText>
+                  </View>
+                    {item.notes && (
+                      <ThemedText style={styles.visitNotes}>{item.notes}</ThemedText>
+                    )}
+                  </View>
+                </View>
+              )}
+              keyExtractor={(item) => item.id || item._id || Math.random().toString()}
+              scrollEnabled={false}
+            />
+          ) : (
+            <View style={styles.emptyNotes}>
+              <ThemedText style={styles.emptyNotesText}>No visits scheduled</ThemedText>
+            </View>
+          )}
+        </View>
       </ScrollView>
     </ThemedView>
   );
@@ -406,6 +488,34 @@ const styles = StyleSheet.create({
   },
   emptyNotesText: {
     opacity: 0.6,
+  },
+  visitItem: {
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  visitContent: {
+    gap: 8,
+  },
+  visitHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  visitDate: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  visitTime: {
+    fontSize: 14,
+    fontWeight: '600',
+    opacity: 0.8,
+  },
+  visitNotes: {
+    fontSize: 14,
+    marginTop: 4,
+    opacity: 0.7,
+    fontStyle: 'italic',
   },
 });
 

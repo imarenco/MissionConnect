@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,64 +8,93 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { contactsApi } from '@/services/api';
+import { visitsApi, Visit } from '@/services/api';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { isNotEmpty, isValidPhoneNumber } from '@/lib/validation';
+import { Calendar, DateData } from 'react-native-calendars';
+import { isFutureDate } from '@/lib/validation';
 
-export default function CreateContactScreen() {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [address, setAddress] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+export default function EditVisitScreen() {
+  const [contactName, setContactName] = useState('');
+  const [date, setDate] = useState('');
+  const [time, setTime] = useState('');
+  const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const router = useRouter();
+  const { id } = useLocalSearchParams();
   const colorScheme = useColorScheme();
 
+  useEffect(() => {
+    if (id) {
+      loadVisit();
+    }
+  }, [id]);
+
+  const loadVisit = async () => {
+    try {
+      setInitialLoading(true);
+      const visitId = Array.isArray(id) ? id[0] : id;
+      const visit = await visitsApi.getById(visitId);
+      if (visit) {
+        setContactName(visit.contactName || '');
+        setDate(visit.date || '');
+        setTime(visit.time || '14:00');
+        setNotes(visit.notes || '');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to load visit');
+      router.back();
+    } finally {
+      setInitialLoading(false);
+    }
+  };
+
   const validateForm = () => {
-    if (!isNotEmpty(firstName)) {
-      Alert.alert('Validation Error', 'First name is required');
+    if (!date) {
+      Alert.alert('Validation Error', 'Date is required');
       return false;
     }
-    if (!isNotEmpty(lastName)) {
-      Alert.alert('Validation Error', 'Last name is required');
+    if (!time) {
+      Alert.alert('Validation Error', 'Time is required');
       return false;
     }
-    if (!isNotEmpty(phoneNumber)) {
-      Alert.alert('Validation Error', 'Phone number is required');
-      return false;
-    }
-    if (!isValidPhoneNumber(phoneNumber)) {
-      Alert.alert('Validation Error', 'Please enter a valid phone number (at least 10 digits)');
+    if (!isFutureDate(date, time)) {
+      Alert.alert('Validation Error', 'Visit date must be in the future');
       return false;
     }
     return true;
   };
 
-  const handleCreate = async () => {
+  const handleUpdate = async () => {
     if (!validateForm()) return;
     setLoading(true);
     try {
-      await contactsApi.create({
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        address: address.trim(),
-        phone: phoneNumber.trim(),
-        phoneNumber: phoneNumber.trim(),
-      });
-      // Reset loading state before navigation
+      const visitId = Array.isArray(id) ? id[0] : id;
+      await visitsApi.update(visitId, {
+        date,
+        time,
+        notes: notes.trim(),
+      } as Partial<Visit>);
       setLoading(false);
-      // Navigate back with refresh signal
       router.back();
     } catch (error: any) {
       setLoading(false);
-      Alert.alert('Error', error.message || 'Failed to create contact. Please try again.');
+      Alert.alert('Error', error.message || 'Failed to update visit. Please try again.');
     }
   };
+
+  if (initialLoading) {
+    return (
+      <ThemedView style={styles.container}>
+        <ActivityIndicator size="large" color={Colors[colorScheme ?? 'light'].tint} />
+      </ThemedView>
+    );
+  }
 
   return (
     <ThemedView style={styles.container}>
@@ -74,7 +103,7 @@ export default function CreateContactScreen() {
           <IconSymbol name="xmark" size={24} color={Colors[colorScheme ?? 'light'].text} />
         </TouchableOpacity>
         <ThemedText type="title" style={styles.title}>
-          New Contact
+          Edit Visit
         </ThemedText>
         <View style={styles.closeButton} />
       </View>
@@ -82,8 +111,45 @@ export default function CreateContactScreen() {
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         <View style={styles.form}>
           <View style={styles.inputContainer}>
+            <ThemedText style={styles.label}>Contact Name</ThemedText>
+            <TextInput
+              style={[
+                styles.input,
+                styles.disabledInput,
+                {
+                  backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
+                  color: Colors[colorScheme ?? 'light'].text,
+                },
+              ]}
+              value={contactName}
+              editable={false}
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
             <ThemedText style={styles.label}>
-              First Name <ThemedText style={styles.required}>*</ThemedText>
+              Date <ThemedText style={styles.required}>*</ThemedText>
+            </ThemedText>
+            <TouchableOpacity
+              onPress={() => {
+                // For now, use simple text input - full calendar will be added via DatePicker component
+              }}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
+                  justifyContent: 'center',
+                },
+              ]}>
+              <ThemedText style={{ color: Colors[colorScheme ?? 'light'].text }}>
+                {date || 'Select date'}
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.inputContainer}>
+            <ThemedText style={styles.label}>
+              Time <ThemedText style={styles.required}>*</ThemedText>
             </ThemedText>
             <TextInput
               style={[
@@ -93,59 +159,15 @@ export default function CreateContactScreen() {
                   color: Colors[colorScheme ?? 'light'].text,
                 },
               ]}
-              placeholder="Enter first name"
+              placeholder="HH:MM"
               placeholderTextColor={colorScheme === 'dark' ? '#888' : '#999'}
-              value={firstName}
-              onChangeText={setFirstName}
-              autoCapitalize="words"
+              value={time}
+              onChangeText={setTime}
             />
           </View>
 
           <View style={styles.inputContainer}>
-            <ThemedText style={styles.label}>
-              Last Name <ThemedText style={styles.required}>*</ThemedText>
-            </ThemedText>
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
-                  color: Colors[colorScheme ?? 'light'].text,
-                },
-              ]}
-              placeholder="Enter last name"
-              placeholderTextColor={colorScheme === 'dark' ? '#888' : '#999'}
-              value={lastName}
-              onChangeText={setLastName}
-              autoCapitalize="words"
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <ThemedText style={styles.label}>
-              Phone Number <ThemedText style={styles.required}>*</ThemedText>
-            </ThemedText>
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
-                  color: Colors[colorScheme ?? 'light'].text,
-                },
-              ]}
-              placeholder="Enter phone number"
-              placeholderTextColor={colorScheme === 'dark' ? '#888' : '#999'}
-              value={phoneNumber}
-              onChangeText={setPhoneNumber}
-              keyboardType="phone-pad"
-            />
-            {phoneNumber && !isValidPhoneNumber(phoneNumber) && (
-              <ThemedText style={styles.errorText}>Please enter a valid phone number (at least 10 digits)</ThemedText>
-            )}
-          </View>
-
-          <View style={styles.inputContainer}>
-            <ThemedText style={styles.label}>Address</ThemedText>
+            <ThemedText style={styles.label}>Notes</ThemedText>
             <TextInput
               style={[
                 styles.input,
@@ -155,10 +177,10 @@ export default function CreateContactScreen() {
                   color: Colors[colorScheme ?? 'light'].text,
                 },
               ]}
-              placeholder="Enter address"
+              placeholder="Add notes about this visit..."
               placeholderTextColor={colorScheme === 'dark' ? '#888' : '#999'}
-              value={address}
-              onChangeText={setAddress}
+              value={notes}
+              onChangeText={setNotes}
               multiline
               numberOfLines={3}
             />
@@ -175,12 +197,12 @@ export default function CreateContactScreen() {
               opacity: loading ? 0.6 : 1,
             },
           ]}
-          onPress={handleCreate}
+          onPress={handleUpdate}
           disabled={loading}>
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <ThemedText style={styles.buttonText}>Create Contact</ThemedText>
+            <ThemedText style={styles.buttonText}>Update Visit</ThemedText>
           )}
         </TouchableOpacity>
       </View>
@@ -232,9 +254,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     fontSize: 16,
   },
-  errorText: {
-    fontSize: 12,
-    color: '#ff3b30',
+  disabledInput: {
+    opacity: 0.6,
   },
   textArea: {
     minHeight: 80,
@@ -257,4 +278,3 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 });
-

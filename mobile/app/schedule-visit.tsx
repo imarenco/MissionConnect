@@ -16,12 +16,15 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { contactsApi, visitsApi, Contact } from '@/services/api';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { DatePicker } from '@/components/DatePicker';
+import { TimePicker } from '@/components/TimePicker';
+import { isNotEmpty, isFutureDate, formatDate } from '@/lib/validation';
 
 export default function ScheduleVisitScreen() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
-  const [date, setDate] = useState('');
-  const [time, setTime] = useState('');
+  const [date, setDate] = useState(formatDate(new Date()));
+  const [time, setTime] = useState('14:00');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingContacts, setLoadingContacts] = useState(true);
@@ -49,33 +52,17 @@ export default function ScheduleVisitScreen() {
       Alert.alert('Validation Error', 'Please select a contact');
       return;
     }
-    if (!date.trim()) {
+    if (!isNotEmpty(date)) {
       Alert.alert('Validation Error', 'Please select a date');
       return;
     }
-    if (!time.trim()) {
+    if (!isNotEmpty(time)) {
       Alert.alert('Validation Error', 'Please select a time');
       return;
     }
 
-    // Validate date format (YYYY-MM-DD)
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(date.trim())) {
-      Alert.alert('Validation Error', 'Please enter a valid date in YYYY-MM-DD format');
-      return;
-    }
-
-    // Validate time format (HH:MM)
-    const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
-    if (!timeRegex.test(time.trim())) {
-      Alert.alert('Validation Error', 'Please enter a valid time in HH:MM format (24-hour)');
-      return;
-    }
-
-    // Validate that the date is not in the past
-    const visitDateTime = new Date(`${date.trim()}T${time.trim()}:00`);
-    const now = new Date();
-    if (visitDateTime < now) {
+    // Validate that the date is in the future
+    if (!isFutureDate(date, time)) {
       Alert.alert('Validation Error', 'Please select a date and time in the future');
       return;
     }
@@ -91,7 +78,7 @@ export default function ScheduleVisitScreen() {
 
       // Reset loading state before navigation
       setLoading(false);
-      // Navigate back immediately after successful creation
+      // Navigate back with refresh signal
       router.back();
     } catch (error: any) {
       setLoading(false);
@@ -187,40 +174,20 @@ export default function ScheduleVisitScreen() {
             <ThemedText style={styles.label}>
               Date <ThemedText style={styles.required}>*</ThemedText>
             </ThemedText>
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
-                  color: Colors[colorScheme ?? 'light'].text,
-                },
-              ]}
-              placeholder="YYYY-MM-DD (e.g., 2024-12-25)"
-              placeholderTextColor={colorScheme === 'dark' ? '#888' : '#999'}
+            <DatePicker
               value={date}
-              onChangeText={setDate}
+              onChange={setDate}
             />
-            <ThemedText style={styles.hint}>Format: YYYY-MM-DD</ThemedText>
           </View>
 
           <View style={styles.inputContainer}>
             <ThemedText style={styles.label}>
               Time <ThemedText style={styles.required}>*</ThemedText>
             </ThemedText>
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
-                  color: Colors[colorScheme ?? 'light'].text,
-                },
-              ]}
-              placeholder="HH:MM (e.g., 14:30)"
-              placeholderTextColor={colorScheme === 'dark' ? '#888' : '#999'}
+            <TimePicker
               value={time}
-              onChangeText={setTime}
+              onChange={setTime}
             />
-            <ThemedText style={styles.hint}>Format: HH:MM (24-hour format)</ThemedText>
           </View>
 
           <View style={styles.inputContainer}>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,23 +8,50 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { contactsApi } from '@/services/api';
+import { contactsApi, Contact } from '@/services/api';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { isNotEmpty, isValidPhoneNumber } from '@/lib/validation';
 
-export default function CreateContactScreen() {
+export default function EditContactScreen() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [address, setAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const router = useRouter();
+  const { id } = useLocalSearchParams();
   const colorScheme = useColorScheme();
+
+  useEffect(() => {
+    if (id) {
+      loadContact();
+    }
+  }, [id]);
+
+  const loadContact = async () => {
+    try {
+      setInitialLoading(true);
+      const contactId = Array.isArray(id) ? id[0] : id;
+      const contact = await contactsApi.getById(contactId);
+      if (contact) {
+        setFirstName(contact.firstName);
+        setLastName(contact.lastName);
+        setAddress(contact.address || '');
+        setPhoneNumber(contact.phoneNumber || contact.phone || '');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to load contact');
+      router.back();
+    } finally {
+      setInitialLoading(false);
+    }
+  };
 
   const validateForm = () => {
     if (!isNotEmpty(firstName)) {
@@ -46,26 +73,33 @@ export default function CreateContactScreen() {
     return true;
   };
 
-  const handleCreate = async () => {
+  const handleUpdate = async () => {
     if (!validateForm()) return;
     setLoading(true);
     try {
-      await contactsApi.create({
+      const contactId = Array.isArray(id) ? id[0] : id;
+      await contactsApi.update(contactId, {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         address: address.trim(),
         phone: phoneNumber.trim(),
         phoneNumber: phoneNumber.trim(),
       });
-      // Reset loading state before navigation
       setLoading(false);
-      // Navigate back with refresh signal
       router.back();
     } catch (error: any) {
       setLoading(false);
-      Alert.alert('Error', error.message || 'Failed to create contact. Please try again.');
+      Alert.alert('Error', error.message || 'Failed to update contact. Please try again.');
     }
   };
+
+  if (initialLoading) {
+    return (
+      <ThemedView style={styles.container}>
+        <ActivityIndicator size="large" color={Colors[colorScheme ?? 'light'].tint} />
+      </ThemedView>
+    );
+  }
 
   return (
     <ThemedView style={styles.container}>
@@ -74,7 +108,7 @@ export default function CreateContactScreen() {
           <IconSymbol name="xmark" size={24} color={Colors[colorScheme ?? 'light'].text} />
         </TouchableOpacity>
         <ThemedText type="title" style={styles.title}>
-          New Contact
+          Edit Contact
         </ThemedText>
         <View style={styles.closeButton} />
       </View>
@@ -175,12 +209,12 @@ export default function CreateContactScreen() {
               opacity: loading ? 0.6 : 1,
             },
           ]}
-          onPress={handleCreate}
+          onPress={handleUpdate}
           disabled={loading}>
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <ThemedText style={styles.buttonText}>Create Contact</ThemedText>
+            <ThemedText style={styles.buttonText}>Update Contact</ThemedText>
           )}
         </TouchableOpacity>
       </View>
@@ -257,4 +291,3 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 });
-

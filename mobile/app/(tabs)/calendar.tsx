@@ -91,6 +91,13 @@ export default function CalendarScreen() {
     setRefreshing(false);
   };
 
+  const handleEdit = (visit: Visit) => {
+    const visitId = visit.id || visit._id;
+    if (visitId) {
+      router.push(`/edit-visit?id=${visitId}`);
+    }
+  };
+
   const handleDelete = async (visit: Visit) => {
     const visitId = visit.id || visit._id;
     
@@ -170,13 +177,22 @@ export default function CalendarScreen() {
           <ThemedText type="defaultSemiBold" style={styles.visitContactName}>
             {item.contactName}
           </ThemedText>
-          <TouchableOpacity
-            onPress={() => handleDelete(item)}
-            style={styles.deleteButton}
-            activeOpacity={0.7}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <IconSymbol name="trash" size={18} color="#ff3b30" />
-          </TouchableOpacity>
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              onPress={() => handleEdit(item)}
+              style={styles.editButton}
+              activeOpacity={0.7}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <IconSymbol name="pencil" size={18} color="#007AFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => handleDelete(item)}
+              style={styles.deleteButton}
+              activeOpacity={0.7}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <IconSymbol name="trash" size={18} color="#ff3b30" />
+            </TouchableOpacity>
+          </View>
         </View>
         <View style={styles.visitDateTime}>
           <IconSymbol name="calendar" size={16} color={Colors[colorScheme ?? 'light'].tint} />
@@ -337,6 +353,17 @@ const styles = StyleSheet.create({
   },
   visitContactName: {
     fontSize: 18,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  editButton: {
+    padding: 8,
+    minWidth: 36,
+    minHeight: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   deleteButton: {
     padding: 8,
