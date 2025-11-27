@@ -39,6 +39,34 @@ The primary purpose of **MissionConnect** is to provide a digital solution for L
 - **Database**: MongoDB for storing user and contact data securely.
 - **Map Integration**: Google Maps API or Mapbox for mapping and location services.
 - **Authentication**: JWT (JSON Web Tokens) for secure user authentication.
+- **Testing**: Jest for unit and integration testing on the backend.
+
+## Testing
+
+This project uses Jest for unit and integration testing on the backend server.
+
+### Backend Testing
+
+Navigate to the `server` directory and run:
+
+```bash
+cd server
+
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage report
+npm run test:coverage
+```
+
+### Test Structure
+
+- **Backend tests**: Located in `server/src/**/__tests__/**/*.test.js` or `server/src/**/*.test.js`
+
+The backend tests use MongoDB Memory Server for isolated database testing, ensuring tests don't affect your development database.
 
 ## Ignacio Favorite quote
 
