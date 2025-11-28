@@ -355,6 +355,47 @@ export default function ContactDetailScreen() {
             </View>
           )}
         </View>
+
+        {/* -------------------- New Location Section -------------------- */}
+
+        <View style={styles.section}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>
+            Location
+          </ThemedText>
+
+          {Platform.OS === "web" ? (
+            <div
+              style={{
+                width: "100%",
+                height: 600,
+                marginTop: 10,
+              }}
+              dangerouslySetInnerHTML={{
+                __html: `
+                  <iframe
+                    width="100%"
+                    height="600"
+                    frameborder="0"
+                    scrolling="no"
+                    marginheight="0"
+                    marginwidth="0"
+                    src="https://maps.google.com/maps?width=100%25&height=600&hl=en&q=${encodeURIComponent(
+                      contact.address || ""
+                    )}&t=&z=14&ie=UTF8&iwloc=B&output=embed">
+                  </iframe>
+                `,
+              }}
+            />
+          ) : (
+            <View style={{ padding: 20 }}>
+              <ThemedText style={{ opacity: 0.6 }}>
+                Map preview is available on the web only.
+              </ThemedText>
+            </View>
+          )}
+        </View>
+
+        {/* ------------------ End of Location Section ------------------ */}
       </ScrollView>
     </ThemedView>
   );
