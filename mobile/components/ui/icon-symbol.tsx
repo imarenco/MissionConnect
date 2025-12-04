@@ -32,6 +32,13 @@ const MAPPING = {
   'checkmark.circle.fill': 'check-circle',
   'clock': 'access-time',
   'calendar.badge.plus': 'event-available',
+  'map.fill': 'map',
+  'map': 'map',
+  'pencil': 'edit',
+  'eye.fill': 'visibility',
+  'eye.slash.fill': 'visibility-off',
+  'location.fill': 'location-on',
+  'location.slash': 'location-off',
 } as IconMapping;
 
 /**

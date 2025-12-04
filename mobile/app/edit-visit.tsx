@@ -7,6 +7,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
@@ -25,8 +26,9 @@ export default function EditVisitScreen() {
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const router = useRouter();
-  const { id } = useLocalSearchParams();
+  const { id, contact } = useLocalSearchParams();
   const colorScheme = useColorScheme();
 
   useEffect(() => {
@@ -39,8 +41,16 @@ export default function EditVisitScreen() {
     try {
       setInitialLoading(true);
       const visitId = Array.isArray(id) ? id[0] : id;
+      
+      // If contact name was passed in params, use it directly
+      if (contact) {
+        const contactName = Array.isArray(contact) ? contact[0] : contact;
+        setContactName(contactName);
+      }
+      
       const visit = await visitsApi.getById(visitId);
       if (visit) {
+        // Use contact from params if available, otherwise from visit data
         setContactName(visit.contactName || '');
         setDate(visit.date || '');
         setTime(visit.time || '14:00');
@@ -131,9 +141,7 @@ export default function EditVisitScreen() {
               Date <ThemedText style={styles.required}>*</ThemedText>
             </ThemedText>
             <TouchableOpacity
-              onPress={() => {
-                // For now, use simple text input - full calendar will be added via DatePicker component
-              }}
+              onPress={() => setShowDatePicker(true)}
               style={[
                 styles.input,
                 {
@@ -141,9 +149,12 @@ export default function EditVisitScreen() {
                   justifyContent: 'center',
                 },
               ]}>
-              <ThemedText style={{ color: Colors[colorScheme ?? 'light'].text }}>
-                {date || 'Select date'}
-              </ThemedText>
+              <View style={styles.datePickerDisplay}>
+                <IconSymbol name="calendar" size={20} color={Colors[colorScheme ?? 'light'].tint} />
+                <ThemedText style={{ color: Colors[colorScheme ?? 'light'].text }}>
+                  {date ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) : 'Select date'}
+                </ThemedText>
+              </View>
             </TouchableOpacity>
           </View>
 
@@ -206,6 +217,51 @@ export default function EditVisitScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      <Modal
+        visible={showDatePicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowDatePicker(false)}>
+        <ThemedView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+              <IconSymbol name="xmark" size={24} color={Colors[colorScheme ?? 'light'].text} />
+            </TouchableOpacity>
+            <ThemedText type="title" style={styles.modalTitle}>
+              Select Date
+            </ThemedText>
+            <View style={{ width: 32 }} />
+          </View>
+          <View style={[styles.calendarContainer, { backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5' }]}>
+            <Calendar
+              current={date || new Date().toISOString().split('T')[0]}
+              onDayPress={(day: DateData) => {
+                setDate(day.dateString);
+                setShowDatePicker(false);
+              }}
+              minDate={new Date().toISOString().split('T')[0]}
+              theme={{
+                backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
+                calendarBackground: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
+                textSectionTitleColor: Colors[colorScheme ?? 'light'].text,
+                selectedDayBackgroundColor: Colors[colorScheme ?? 'light'].tint,
+                selectedDayTextColor: '#ffffff',
+                todayTextColor: Colors[colorScheme ?? 'light'].tint,
+                dayTextColor: Colors[colorScheme ?? 'light'].text,
+                textDisabledColor: colorScheme === 'dark' ? '#555' : '#d9e1e8',
+                dotColor: Colors[colorScheme ?? 'light'].tint,
+                selectedDotColor: '#ffffff',
+                arrowColor: Colors[colorScheme ?? 'light'].tint,
+                monthTextColor: Colors[colorScheme ?? 'light'].text,
+                indicatorColor: Colors[colorScheme ?? 'light'].tint,
+                textDayFontWeight: '600',
+                textMonthFontWeight: 'bold',
+              }}
+            />
+          </View>
+        </ThemedView>
+      </Modal>
     </ThemedView>
   );
 }
@@ -254,6 +310,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     fontSize: 16,
   },
+  datePickerDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   disabledInput: {
     opacity: 0.6,
   },
@@ -276,5 +337,26 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#fff',
+  },
+  modalContainer: {
+    flex: 1,
+    paddingTop: 60,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    paddingBottom: 10,
+  },
+  modalTitle: {
+    fontSize: 20,
+    flex: 1,
+    textAlign: 'center',
+  },
+  calendarContainer: {
+    margin: 20,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
 });

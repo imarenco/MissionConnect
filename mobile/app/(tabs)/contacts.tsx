@@ -97,12 +97,9 @@ export default function ContactsScreen() {
     console.log('Showing delete confirmation for ID:', contactId);
     
     // Use confirm for web compatibility, Alert.alert for native
-    const confirmed = window.confirm
-      ? window.confirm(`Are you sure you want to delete ${contact.firstName} ${contact.lastName}?`)
-      : true; // For native, will use Alert.alert
-    
-    if (window.confirm) {
+    if (typeof window !== 'undefined' && window.confirm) {
       // Web platform - use confirm
+      const confirmed = window.confirm(`Are you sure you want to delete ${contact.firstName} ${contact.lastName}?`);
       if (confirmed) {
         try {
           console.log('Deleting contact with ID:', contactId);
@@ -220,7 +217,7 @@ export default function ContactsScreen() {
             style={styles.editButton}
             activeOpacity={0.7}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <IconSymbol name="pencil" size={20} color="#007AFF" />
+            <IconSymbol name="pencil" size={20} color={Colors[colorScheme ?? 'light'].tint} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => {
@@ -329,18 +326,28 @@ export default function ContactsScreen() {
                     backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
                   },
                 ]}>
-                <View>
-                  <View style={styles.visitModalHeader}>
-                    <ThemedText style={styles.visitModalDate}>
-                      {item.date ? formatDate(item.date) : 'No date'}
-                    </ThemedText>
-                    <ThemedText style={styles.visitModalTime}>
-                      {item.time ? formatTime(item.time) : 'No time'}
-                    </ThemedText>
+                <View style={styles.visitItemContent}>
+                  <View style={styles.visitItemInfo}>
+                    <View style={styles.visitModalHeader}>
+                      <ThemedText style={styles.visitModalDate}>
+                        {item.date ? formatDate(item.date) : 'No date'}
+                      </ThemedText>
+                      <ThemedText style={styles.visitModalTime}>
+                        {item.time ? formatTime(item.time) : 'No time'}
+                      </ThemedText>
+                    </View>
+                    {item.notes && (
+                      <ThemedText style={styles.visitModalNotes}>{item.notes}</ThemedText>
+                    )}
                   </View>
-                  {item.notes && (
-                    <ThemedText style={styles.visitModalNotes}>{item.notes}</ThemedText>
-                  )}
+                  <TouchableOpacity
+                    onPress={() => {
+                      setShowVisitsModal(false);
+                      router.push(`/edit-visit?id=${item.id || item._id}&contact=${selectedContactName}`);
+                    }}
+                    style={styles.visitEditButton}>
+                    <IconSymbol name="pencil" size={18} color={Colors[colorScheme ?? 'light'].tint} />
+                  </TouchableOpacity>
                 </View>
               </View>
             )}
@@ -495,6 +502,18 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 12,
     gap: 8,
+  },
+  visitItemContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  visitItemInfo: {
+    flex: 1,
+  },
+  visitEditButton: {
+    padding: 8,
   },
   visitModalHeader: {
     flexDirection: 'row',

@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   FlatList,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -22,6 +22,8 @@ import { isNotEmpty, isFutureDate, formatDate } from '@/lib/validation';
 
 export default function ScheduleVisitScreen() {
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [filteredContacts, setFilteredContacts] = useState<Contact[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [date, setDate] = useState(formatDate(new Date()));
   const [time, setTime] = useState('14:00');
@@ -29,20 +31,43 @@ export default function ScheduleVisitScreen() {
   const [loading, setLoading] = useState(false);
   const [loadingContacts, setLoadingContacts] = useState(true);
   const router = useRouter();
+  const { date: paramDate, time: paramTime } = useLocalSearchParams();
   const colorScheme = useColorScheme();
 
   useEffect(() => {
+    if (paramDate) {
+      setDate(Array.isArray(paramDate) ? paramDate[0] : paramDate);
+    }
+    if (paramTime) {
+      setTime(Array.isArray(paramTime) ? paramTime[0] : paramTime);
+    }
     loadContacts();
-  }, []);
+  }, [paramDate, paramTime]);
 
   const loadContacts = async () => {
     try {
       const data = await contactsApi.getAll();
       setContacts(data);
+      setFilteredContacts(data);
     } catch {
       Alert.alert('Error', 'Failed to load contacts');
     } finally {
       setLoadingContacts(false);
+    }
+  };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    if (query.trim()) {
+      const filtered = contacts.filter(
+        (contact) =>
+          contact.firstName.toLowerCase().includes(query.toLowerCase()) ||
+          contact.lastName.toLowerCase().includes(query.toLowerCase()) ||
+          `${contact.firstName} ${contact.lastName}`.toLowerCase().includes(query.toLowerCase())
+      );
+      setFilteredContacts(filtered);
+    } else {
+      setFilteredContacts(contacts);
     }
   };
 
@@ -109,48 +134,79 @@ export default function ScheduleVisitScreen() {
             {loadingContacts ? (
               <ActivityIndicator size="small" color={Colors[colorScheme ?? 'light'].tint} />
             ) : (
-              <FlatList
-                data={contacts}
-                renderItem={({ item }) => {
-                  const itemId = item.id || item._id || '';
-                  return (
-                    <TouchableOpacity
-                      style={[
-                        styles.contactOption,
-                        {
-                          backgroundColor:
-                            selectedContactId === itemId
-                              ? Colors[colorScheme ?? 'light'].tint
-                              : colorScheme === 'dark'
-                              ? '#2a2a2a'
-                              : '#f5f5f5',
-                        },
-                      ]}
-                      onPress={() => setSelectedContactId(itemId || null)}>
-                      <ThemedText
-                        style={[
-                          styles.contactOptionText,
-                          {
-                            color:
-                              selectedContactId === itemId
-                                ? '#fff'
-                                : Colors[colorScheme ?? 'light'].text,
-                          },
-                        ]}>
-                        {item.firstName} {item.lastName}
-                      </ThemedText>
-                      {selectedContactId === itemId && (
-                        <IconSymbol name="checkmark.circle.fill" size={20} color="#fff" />
-                      )}
+              <>
+                <View
+                  style={[
+                    styles.searchContainer,
+                    {
+                      backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
+                    },
+                  ]}
+                >
+                  <IconSymbol name="magnifyingglass" size={18} color={Colors[colorScheme ?? 'light'].icon} />
+                  <TextInput
+                    style={[
+                      styles.searchInput,
+                      {
+                        color: Colors[colorScheme ?? 'light'].text,
+                      },
+                    ]}
+                    placeholder="Search contacts..."
+                    placeholderTextColor={colorScheme === 'dark' ? '#888' : '#999'}
+                    value={searchQuery}
+                    onChangeText={handleSearch}
+                  />
+                  {searchQuery ? (
+                    <TouchableOpacity onPress={() => handleSearch('')}>
+                      <IconSymbol name="xmark.circle.fill" size={18} color={Colors[colorScheme ?? 'light'].icon} />
                     </TouchableOpacity>
-                  );
-                }}
-                keyExtractor={(item) => item.id || item._id || Math.random().toString()}
-                scrollEnabled={false}
-                ListEmptyComponent={
-                  <ThemedText style={styles.emptyText}>No contacts available</ThemedText>
-                }
-              />
+                  ) : null}
+                </View>
+                <FlatList
+                  data={filteredContacts}
+                  renderItem={({ item }) => {
+                    const itemId = item.id || item._id || '';
+                    return (
+                      <TouchableOpacity
+                        style={[
+                          styles.contactOption,
+                          {
+                            backgroundColor:
+                              selectedContactId === itemId
+                                ? Colors[colorScheme ?? 'light'].tint
+                                : colorScheme === 'dark'
+                                ? '#2a2a2a'
+                                : '#f5f5f5',
+                          },
+                        ]}
+                        onPress={() => setSelectedContactId(itemId || null)}>
+                        <ThemedText
+                          style={[
+                            styles.contactOptionText,
+                            {
+                              color:
+                                selectedContactId === itemId
+                                  ? '#fff'
+                                  : Colors[colorScheme ?? 'light'].text,
+                            },
+                          ]}>
+                          {item.firstName} {item.lastName}
+                        </ThemedText>
+                        {selectedContactId === itemId && (
+                          <IconSymbol name="checkmark.circle.fill" size={20} color="#fff" />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  }}
+                  keyExtractor={(item) => item.id || item._id || Math.random().toString()}
+                  scrollEnabled={false}
+                  ListEmptyComponent={
+                    <ThemedText style={styles.emptyText}>
+                      {searchQuery ? 'No contacts found' : 'No contacts available'}
+                    </ThemedText>
+                  }
+                />
+              </>
             )}
           </View>
 
@@ -276,6 +332,19 @@ const styles = StyleSheet.create({
   hint: {
     fontSize: 12,
     opacity: 0.6,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    gap: 10,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 10,
+    fontSize: 16,
   },
   input: {
     padding: 12,

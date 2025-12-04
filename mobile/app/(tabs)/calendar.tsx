@@ -8,6 +8,7 @@ import {
   RefreshControl,
   ScrollView,
   Platform,
+  Modal,
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import { useRouter } from 'expo-router';
@@ -26,6 +27,11 @@ export default function CalendarScreen() {
   );
   const [selectedDateVisits, setSelectedDateVisits] = useState<Visit[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [viewMode, setViewMode] = useState<'monthly' | 'daily'>('monthly');
+  const [hourlyTasks, setHourlyTasks] = useState<{ [hour: number]: { title: string; description: string; contactName?: string; contactId?: string } }>({});
+  const [selectedHour, setSelectedHour] = useState<number | null>(null);
+  const [showHourModal, setShowHourModal] = useState(false);
+  const [draggedVisit, setDraggedVisit] = useState<Visit | null>(null);
   const router = useRouter();
   const colorScheme = useColorScheme();
   const { user, isLoading } = useAuth();
@@ -93,8 +99,9 @@ export default function CalendarScreen() {
 
   const handleEdit = (visit: Visit) => {
     const visitId = visit.id || visit._id;
+    const contactName = visit.contactName || 'Contact';
     if (visitId) {
-      router.push(`/edit-visit?id=${visitId}`);
+      router.push(`/edit-visit?id=${visitId}&contact=${encodeURIComponent(contactName)}`);
     }
   };
 
@@ -164,6 +171,51 @@ export default function CalendarScreen() {
     return `${displayHour}:${minutes} ${ampm}`;
   };
 
+  const getHourlyVisits = () => {
+    const visitsByHour: { [hour: number]: Visit[] } = {};
+    selectedDateVisits.forEach(visit => {
+      if (visit.time) {
+        const hour = parseInt(visit.time.split(':')[0], 10);
+        if (!visitsByHour[hour]) {
+          visitsByHour[hour] = [];
+        }
+        visitsByHour[hour].push(visit);
+      }
+    });
+    return visitsByHour;
+  };
+
+  const handleHourlySlotPress = (hour: number) => {
+    setSelectedHour(hour);
+    setShowHourModal(true);
+  };
+
+  const handleCreateAtHour = () => {
+    if (selectedHour !== null) {
+      const timeString = String(selectedHour).padStart(2, '0') + ':00';
+      router.push({
+        pathname: '/schedule-visit',
+        params: { date: selectedDate, time: timeString },
+      });
+      setShowHourModal(false);
+    }
+  };
+
+  const handleMoveVisit = async (visit: Visit, newHour: number) => {
+    const newTime = String(newHour).padStart(2, '0') + ':00';
+    try {
+      await visitsApi.update(visit.id || visit._id, {
+        date: visit.date,
+        time: newTime,
+        notes: visit.notes,
+      } as Partial<Visit>);
+      await loadVisits();
+      setDraggedVisit(null);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to move visit');
+    }
+  };
+
   const renderVisit = ({ item }: { item: Visit }) => (
     <View
       style={[
@@ -183,7 +235,7 @@ export default function CalendarScreen() {
               style={styles.editButton}
               activeOpacity={0.7}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <IconSymbol name="pencil" size={18} color="#007AFF" />
+              <IconSymbol name="pencil" size={18} color={Colors[colorScheme ?? 'light'].tint} />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => handleDelete(item)}
@@ -215,6 +267,34 @@ export default function CalendarScreen() {
         <ThemedText type="title" style={styles.title}>
           Calendar
         </ThemedText>
+        <View style={styles.viewToggle}>
+          <TouchableOpacity
+            style={[
+              styles.toggleButton,
+              viewMode === 'monthly' && { backgroundColor: Colors[colorScheme ?? 'light'].tint },
+            ]}
+            onPress={() => setViewMode('monthly')}>
+            <ThemedText style={[
+              styles.toggleText,
+              viewMode === 'monthly' && { color: '#fff' }
+            ]}>
+              Monthly
+            </ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.toggleButton,
+              viewMode === 'daily' && { backgroundColor: Colors[colorScheme ?? 'light'].tint },
+            ]}
+            onPress={() => setViewMode('daily')}>
+            <ThemedText style={[
+              styles.toggleText,
+              viewMode === 'daily' && { color: '#fff' }
+            ]}>
+              Daily
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -223,67 +303,182 @@ export default function CalendarScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }>
-        <View
-          style={[
-            styles.calendarContainer,
-            {
-              backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
-            },
-          ]}>
-          <Calendar
-            current={selectedDate}
-            onDayPress={onDayPress}
-            markedDates={markedDates}
-            theme={{
-              backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
-              calendarBackground: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
-              textSectionTitleColor: Colors[colorScheme ?? 'light'].text,
-              selectedDayBackgroundColor: Colors[colorScheme ?? 'light'].tint,
-              selectedDayTextColor: '#ffffff',
-              todayTextColor: Colors[colorScheme ?? 'light'].tint,
-              dayTextColor: Colors[colorScheme ?? 'light'].text,
-              textDisabledColor: colorScheme === 'dark' ? '#555' : '#d9e1e8',
-              dotColor: Colors[colorScheme ?? 'light'].tint,
-              selectedDotColor: '#ffffff',
-              arrowColor: Colors[colorScheme ?? 'light'].tint,
-              monthTextColor: Colors[colorScheme ?? 'light'].text,
-              indicatorColor: Colors[colorScheme ?? 'light'].tint,
-              textDayFontWeight: '600',
-              textMonthFontWeight: 'bold',
-              textDayHeaderFontWeight: '600',
-              textDayFontSize: 16,
-              textMonthFontSize: 16,
-              textDayHeaderFontSize: 13,
-            }}
-            style={styles.calendar}
-          />
-        </View>
+        {viewMode === 'monthly' ? (
+          <>
+            <View
+              style={[
+                styles.calendarContainer,
+                {
+                  backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
+                },
+              ]}>
+              <Calendar
+                current={selectedDate}
+                onDayPress={onDayPress}
+                markedDates={markedDates}
+                theme={{
+                  backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
+                  calendarBackground: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
+                  textSectionTitleColor: Colors[colorScheme ?? 'light'].text,
+                  selectedDayBackgroundColor: Colors[colorScheme ?? 'light'].tint,
+                  selectedDayTextColor: '#ffffff',
+                  todayTextColor: Colors[colorScheme ?? 'light'].tint,
+                  dayTextColor: Colors[colorScheme ?? 'light'].text,
+                  textDisabledColor: colorScheme === 'dark' ? '#555' : '#d9e1e8',
+                  dotColor: Colors[colorScheme ?? 'light'].tint,
+                  selectedDotColor: '#ffffff',
+                  arrowColor: Colors[colorScheme ?? 'light'].tint,
+                  monthTextColor: Colors[colorScheme ?? 'light'].text,
+                  indicatorColor: Colors[colorScheme ?? 'light'].tint,
+                  textDayFontWeight: '600',
+                  textMonthFontWeight: 'bold',
+                  textDayHeaderFontWeight: '600',
+                  textDayFontSize: 16,
+                  textMonthFontSize: 16,
+                  textDayHeaderFontSize: 13,
+                }}
+                style={styles.calendar}
+              />
+            </View>
 
-        <View style={styles.visitsSection}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>
-            Visits on {formatDate(selectedDate)}
-          </ThemedText>
+            <View style={styles.visitsSection}>
+              <ThemedText type="subtitle" style={styles.sectionTitle}>
+                Visits on {formatDate(selectedDate)}
+              </ThemedText>
 
-          {selectedDateVisits.length > 0 ? (
+              {selectedDateVisits.length > 0 ? (
+                <FlatList
+                  data={selectedDateVisits}
+                  renderItem={renderVisit}
+                  keyExtractor={(item) => item.id || item._id || Math.random().toString()}
+                  scrollEnabled={false}
+                />
+              ) : (
+                <View style={styles.emptyContainer}>
+                  <IconSymbol
+                    name="calendar.badge.plus"
+                    size={48}
+                    color={Colors[colorScheme ?? 'light'].icon}
+                  />
+                  <ThemedText style={styles.emptyText}>
+                    No visits scheduled for this date
+                  </ThemedText>
+                </View>
+              )}
+            </View>
+          </>
+        ) : (
+          // Daily view with hourly slots
+          <View style={styles.visitsSection}>
+            <View style={styles.dailyHeader}>
+              <TouchableOpacity
+                onPress={() => {
+                  const prevDate = new Date(selectedDate);
+                  prevDate.setDate(prevDate.getDate() - 1);
+                  const newDate = prevDate.toISOString().split('T')[0];
+                  onDayPress({ dateString: newDate } as DateData);
+                }}
+                style={styles.dateNavButton}>
+                <IconSymbol name="chevron.left" size={24} color={Colors[colorScheme ?? 'light'].tint} />
+              </TouchableOpacity>
+              
+              <View style={styles.dateDisplay}>
+                <ThemedText type="subtitle" style={styles.dailyDate}>
+                  {formatDate(selectedDate)}
+                </ThemedText>
+              </View>
+              
+              <TouchableOpacity
+                onPress={() => {
+                  const nextDate = new Date(selectedDate);
+                  nextDate.setDate(nextDate.getDate() + 1);
+                  const newDate = nextDate.toISOString().split('T')[0];
+                  onDayPress({ dateString: newDate } as DateData);
+                }}
+                style={styles.dateNavButton}>
+                <IconSymbol name="chevron.right" size={24} color={Colors[colorScheme ?? 'light'].tint} />
+              </TouchableOpacity>
+            </View>
+
             <FlatList
-              data={selectedDateVisits}
-              renderItem={renderVisit}
-              keyExtractor={(item) => item.id || item._id || Math.random().toString()}
+              data={Array.from({ length: 24 }, (_, i) => i)}
+              renderItem={({ item: hour }) => {
+                const hourVisits = selectedDateVisits.filter(v => {
+                  const visitHour = parseInt(v.time?.split(':')[0] || '0', 10);
+                  return visitHour === hour;
+                });
+
+                return (
+                  <View
+                    key={hour}
+                    style={[
+                      styles.hourlySlot,
+                      {
+                        backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
+                      },
+                    ]}>
+                    <View style={styles.hourLabel}>
+                      <ThemedText style={styles.hourText}>
+                        {String(hour).padStart(2, '0')}:00
+                      </ThemedText>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => handleHourlySlotPress(hour)}
+                      style={styles.hourContent}
+                      activeOpacity={0.7}>
+                      {hourVisits.length > 0 ? (
+                        hourVisits.map(visit => (
+                          <TouchableOpacity
+                            key={visit.id || visit._id}
+                            onLongPress={() => setDraggedVisit(visit)}
+                            style={[
+                              styles.hourlyVisit,
+                              {
+                                backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#e8f4f8',
+                              },
+                              draggedVisit?.id === visit.id && styles.draggedVisit,
+                            ]}>
+                            <View style={styles.visitDetails}>
+                              <ThemedText type="defaultSemiBold" style={styles.visitTitle}>
+                                {visit.contactName}
+                              </ThemedText>
+                              <ThemedText style={styles.visitTime}>
+                                {visit.time ? formatTime(visit.time) : ''}
+                              </ThemedText>
+                              {visit.notes && (
+                                <ThemedText style={styles.visitDescription}>
+                                  {visit.notes}
+                                </ThemedText>
+                              )}
+                            </View>
+                            <View style={styles.hourlyActions}>
+                              <TouchableOpacity
+                                onPress={() => handleEdit(visit)}
+                                style={styles.hourlyEditButton}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                                <IconSymbol name="pencil" size={16} color={Colors[colorScheme ?? 'light'].tint} />
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                onPress={() => handleDelete(visit)}
+                                style={styles.hourlyDeleteButton}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                                <IconSymbol name="trash" size={16} color="#ff3b30" />
+                              </TouchableOpacity>
+                            </View>
+                          </TouchableOpacity>
+                        ))
+                      ) : (
+                        <View style={styles.emptyHour} />
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                );
+              }}
+              keyExtractor={(item) => `hour-${item}`}
               scrollEnabled={false}
             />
-          ) : (
-            <View style={styles.emptyContainer}>
-              <IconSymbol
-                name="calendar.badge.plus"
-                size={48}
-                color={Colors[colorScheme ?? 'light'].icon}
-              />
-              <ThemedText style={styles.emptyText}>
-                No visits scheduled for this date
-              </ThemedText>
-            </View>
-          )}
-        </View>
+          </View>
+        )}
       </ScrollView>
 
       <TouchableOpacity
@@ -296,6 +491,35 @@ export default function CalendarScreen() {
         onPress={() => router.push('/schedule-visit')}>
         <IconSymbol name="plus" size={28} color="#fff" />
       </TouchableOpacity>
+
+      <Modal
+        visible={showHourModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowHourModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#fff' }]}>
+            <ThemedText type="defaultSemiBold" style={styles.modalTitle}>
+              Create Visit at {selectedHour !== null ? String(selectedHour).padStart(2, '0') + ':00' : ''}
+            </ThemedText>
+            <ThemedText style={styles.modalText}>
+              Would you like to create a new visit at this time?
+            </ThemedText>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#e0e0e0' }]}
+                onPress={() => setShowHourModal(false)}>
+                <ThemedText style={styles.modalButtonText}>Cancel</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: Colors[colorScheme ?? 'light'].tint }]}
+                onPress={handleCreateAtHour}>
+                <ThemedText style={[styles.modalButtonText, { color: '#fff' }]}>Create</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ThemedView>
   );
 }
@@ -307,9 +531,27 @@ const styles = StyleSheet.create({
   header: {
     padding: 20,
     paddingTop: 60,
+    gap: 16,
   },
   title: {
     fontSize: 32,
+  },
+  viewToggle: {
+    flexDirection: 'row',
+    gap: 8,
+    alignSelf: 'flex-start',
+  },
+  toggleButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  toggleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#007AFF',
   },
   scrollView: {
     flex: 1,
@@ -413,6 +655,137 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+  },
+  // Daily view styles
+  dailyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 8,
+  },
+  dateNavButton: {
+    padding: 8,
+    minWidth: 40,
+    minHeight: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dateDisplay: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  dailyDate: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  hourlySlot: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    minHeight: 80,
+  },
+  hourLabel: {
+    width: 60,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    justifyContent: 'flex-start',
+    borderRightWidth: 1,
+    borderRightColor: '#e0e0e0',
+  },
+  hourText: {
+    fontSize: 12,
+    fontWeight: '600',
+    opacity: 0.6,
+  },
+  hourContent: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  hourlyVisit: {
+    flexDirection: 'row',
+    padding: 12,
+    borderRadius: 8,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  visitDetails: {
+    flex: 1,
+    gap: 4,
+  },
+  visitTitle: {
+    fontSize: 16,
+  },
+  visitDescription: {
+    fontSize: 12,
+    opacity: 0.6,
+    marginTop: 4,
+  },
+  emptyHour: {
+    flex: 1,
+  },
+  hourlyActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginLeft: 8,
+  },
+  hourlyEditButton: {
+    padding: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  hourlyDeleteButton: {
+    padding: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  draggedVisit: {
+    opacity: 0.5,
+    borderWidth: 2,
+    borderColor: Colors['light'].tint,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    borderRadius: 12,
+    padding: 20,
+    minWidth: 280,
+    gap: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 18,
+    textAlign: 'center',
+  },
+  modalText: {
+    fontSize: 14,
+    textAlign: 'center',
+    opacity: 0.7,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

@@ -15,7 +15,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { contactsApi, Contact } from '@/services/api';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { isNotEmpty, isValidPhoneNumber } from '@/lib/validation';
+import { isNotEmpty, isValidPhoneNumber, isValidAddress } from '@/lib/validation';
 
 export default function EditContactScreen() {
   const [firstName, setFirstName] = useState('');
@@ -70,6 +70,18 @@ export default function EditContactScreen() {
       Alert.alert('Validation Error', 'Please enter a valid phone number (at least 10 digits)');
       return false;
     }
+    
+    // Address validation - if provided, must be valid for geocoding
+    if (address.trim().length > 0) {
+      if (!isValidAddress(address)) {
+        Alert.alert(
+          'Invalid Address',
+          'Please enter a more complete address.\n\nExamples:\n• 123 Main St, City, State\n• 520 North St, Provo, UT\n• City, State\n\nAddress should have at least:\n- A street number or city name\n- At least 5 characters'
+        );
+        return false;
+      }
+    }
+    
     return true;
   };
 
@@ -189,13 +201,23 @@ export default function EditContactScreen() {
                   color: Colors[colorScheme ?? 'light'].text,
                 },
               ]}
-              placeholder="Enter address"
+              placeholder="e.g., 123 Main St, Provo, UT 84601"
               placeholderTextColor={colorScheme === 'dark' ? '#888' : '#999'}
               value={address}
               onChangeText={setAddress}
               multiline
               numberOfLines={3}
             />
+            {address && !isValidAddress(address) && (
+              <ThemedText style={styles.warningText}>
+                Address may not geocode properly. Include city/state or more complete address info.
+              </ThemedText>
+            )}
+            {!address && (
+              <ThemedText style={styles.hintText}>
+                Optional - but required for map display. Example: '123 Main St, Provo, UT'
+              </ThemedText>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -269,6 +291,16 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 12,
     color: '#ff3b30',
+  },
+  warningText: {
+    fontSize: 12,
+    color: '#ff9500',
+    marginTop: 4,
+  },
+  hintText: {
+    fontSize: 12,
+    color: '#888888',
+    marginTop: 4,
   },
   textArea: {
     minHeight: 80,

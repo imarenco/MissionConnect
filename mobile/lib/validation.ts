@@ -20,6 +20,31 @@ export const isNotEmpty = (value: string): boolean => {
   return value.trim().length > 0;
 };
 
+// Address validation - ensure it has meaningful components for geocoding
+export const isValidAddress = (address: string): boolean => {
+  if (!address || address.trim().length < 5) {
+    return false;
+  }
+  
+  const trimmedAddress = address.trim();
+  
+  // Must have at least 5 characters and some structure
+  // Should have at least street number/name and city/area
+  // Examples: "123 Main St, City" or "520 North St" or "Provo, UT"
+  
+  // Count words and check for minimum complexity
+  const words = trimmedAddress.split(/\s+/).length;
+  if (words < 2) {
+    return false;
+  }
+  
+  // Check for at least one number or a comma (indicating street + city)
+  const hasNumber = /\d/.test(trimmedAddress);
+  const hasComma = trimmedAddress.includes(',');
+  
+  return hasNumber || hasComma || words >= 3;
+};
+
 // Date validation (YYYY-MM-DD format)
 export const isValidDate = (date: string): boolean => {
   const dateRegex = /^\d{4}-\d{2}-\d{2}$/;

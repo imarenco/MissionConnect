@@ -8,6 +8,84 @@ function getUserId(req) {
 }
 
 /**
+ * Geocode address to get latitude and longitude using FREE Nominatim (OpenStreetMap)
+ * No API key required - 100% free
+ */
+async function geocodeAddress(address) {
+  if (!address) return { lat: null, lng: null };
+  
+  try {
+    const encodedAddress = encodeURIComponent(address);
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}`;
+    
+    const response = await fetch(url, {
+      headers: { 'User-Agent': 'MissionConnect' }
+    });
+    const data = await response.json();
+    
+    if (data && data.length > 0) {
+      const location = data[0];
+      const lat = parseFloat(location.lat);
+      const lng = parseFloat(location.lon);
+      console.log(`✅ Geocoded "${address}" → lat: ${lat}, lng: ${lng}`);
+      return { lat, lng };
+    }
+    
+    console.warn(`⚠️  No geocoding results for: ${address}`);
+    return { lat: null, lng: null };
+  } catch (error) {
+    console.error('Geocoding error:', error);
+    return { lat: null, lng: null };
+  }
+}
+
+/**
+ * POST /api/contacts/geocode-all
+ * Geocode all contacts in the database that have addresses but no coordinates
+ * This is a one-time migration for existing contacts
+ */
+export const geocodeAllContacts = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    // Find all contacts belonging to this user without lat/lng but with address
+    const contactsToGeocode = await Contact.find({
+      $or: [{ owner: userId }, { missionary: userId }],
+      address: { $exists: true, $ne: '' },
+      $or: [
+        { lat: null },
+        { lat: { $exists: false } },
+        { lng: null },
+        { lng: { $exists: false } }
+      ]
+    });
+
+    console.log(`🗺️  Found ${contactsToGeocode.length} contacts to geocode`);
+
+    let geocodedCount = 0;
+    for (const contact of contactsToGeocode) {
+      const { lat, lng } = await geocodeAddress(contact.address);
+      if (lat && lng) {
+        contact.lat = lat;
+        contact.lng = lng;
+        await contact.save();
+        geocodedCount++;
+      }
+    }
+
+    return res.status(200).json({
+      message: `Geocoded ${geocodedCount} contacts`,
+      geocodedCount,
+      totalCount: contactsToGeocode.length
+    });
+  } catch (error) {
+    console.error("Error geocoding contacts:", error);
+    return res.status(500).json({ message: "Server error geocoding contacts" });
+  }
+};
+
+/**
  * GET /api/contacts
  * Return all contacts that belong to the logged-in user.
  * Accepts an optional query ?q for searching by firstName/lastName.
@@ -61,6 +139,16 @@ export const createContact = async (req, res) => {
     // Ensure owner/missionary is set so other parts of the app can find it
     payload.owner = payload.owner || userId;
     payload.missionary = payload.missionary || userId;
+
+    // Geocode address to get lat/lng if not already provided
+    if (payload.address && (!payload.lat || !payload.lng)) {
+      console.log(`🗺️  Geocoding address: ${payload.address}`);
+      const { lat, lng } = await geocodeAddress(payload.address);
+      if (lat && lng) {
+        payload.lat = lat;
+        payload.lng = lng;
+      }
+    }
 
     const contact = new Contact(payload);
     await contact.save();
@@ -132,6 +220,16 @@ export const updateContact = async (req, res) => {
         contact[field] = req.body[field];
       }
     });
+
+    // If address was updated and lat/lng not provided, geocode it
+    if (req.body.address && contact.address && (!req.body.lat || !req.body.lng)) {
+      console.log(`🗺️  Geocoding updated address: ${contact.address}`);
+      const { lat, lng } = await geocodeAddress(contact.address);
+      if (lat && lng) {
+        contact.lat = lat;
+        contact.lng = lng;
+      }
+    }
 
     await contact.save();
     return res.status(200).json(contact);

@@ -101,7 +101,7 @@ export default function LoginScreen() {
                 <IconSymbol
                   name={showPassword ? 'eye.fill' : 'eye.slash.fill'}
                   size={20}
-                  color={Colors[colorScheme ?? 'light'].icon}
+                  color={Colors[colorScheme ?? 'light'].tint}
                 />
               </TouchableOpacity>
             </View>

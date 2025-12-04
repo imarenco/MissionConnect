@@ -7,6 +7,8 @@ export interface Contact {
   lastName: string;
   address: string;
   phoneNumber: string;
+  lat?: number;
+  lng?: number;
   location?: {
     latitude: number;
     longitude: number;
@@ -41,15 +43,37 @@ let contacts: Contact[] = [
     id: '1',
     firstName: 'John',
     lastName: 'Doe',
-    address: '123 Main St, City, State',
+    address: '123 Main St, Provo, UT',
     phoneNumber: '555-0101',
+    lat: 40.2338,
+    lng: -111.6585,
   },
   {
     id: '2',
     firstName: 'Jane',
     lastName: 'Smith',
-    address: '456 Oak Ave, City, State',
+    address: '456 Oak Ave, Orem, UT',
     phoneNumber: '555-0102',
+    lat: 40.2969,
+    lng: -111.6846,
+  },
+  {
+    id: '3',
+    firstName: 'Robert',
+    lastName: 'Johnson',
+    address: '789 Elm St, Lehi, UT',
+    phoneNumber: '555-0103',
+    lat: 40.3887,
+    lng: -111.8903,
+  },
+  {
+    id: '4',
+    firstName: 'Sarah',
+    lastName: 'Williams',
+    address: '321 Pine St, American Fork, UT',
+    phoneNumber: '555-0104',
+    lat: 40.3872,
+    lng: -111.9117,
   },
 ];
 
