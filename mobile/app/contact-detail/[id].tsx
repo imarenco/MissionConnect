@@ -17,6 +17,9 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { contactsApi, notesApi, visitsApi, Contact, Note, Visit } from '@/services/api';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { StatusPicker, ContactStatus } from '@/components/StatusPicker';
+import { ProgressIndicator } from '@/components/ProgressIndicator';
+import { DatePicker } from '@/components/DatePicker';
 
 export default function ContactDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -26,6 +29,7 @@ export default function ContactDetailScreen() {
   const [newNote, setNewNote] = useState('');
   const [loading, setLoading] = useState(true);
   const [addingNote, setAddingNote] = useState(false);
+  const [updating, setUpdating] = useState(false);
   const router = useRouter();
   const colorScheme = useColorScheme();
 
@@ -167,6 +171,48 @@ export default function ContactDetailScreen() {
     });
   };
 
+  const handleStatusChange = async (status: ContactStatus) => {
+    if (!id || !contact) return;
+    setUpdating(true);
+    try {
+      const contactId = Array.isArray(id) ? id[0] : id;
+      const updated = await contactsApi.update(contactId, { status });
+      setContact(updated);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to update status');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleProgressChange = async (progress: number) => {
+    if (!id || !contact) return;
+    setUpdating(true);
+    try {
+      const contactId = Array.isArray(id) ? id[0] : id;
+      const updated = await contactsApi.update(contactId, { progress });
+      setContact(updated);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to update progress');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleBaptismDateChange = async (date: string) => {
+    if (!id || !contact) return;
+    setUpdating(true);
+    try {
+      const contactId = Array.isArray(id) ? id[0] : id;
+      const updated = await contactsApi.update(contactId, { baptismDate: date });
+      setContact(updated);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to update baptism date');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   if (loading) {
     return (
       <ThemedView style={styles.container}>
@@ -232,6 +278,57 @@ export default function ContactDetailScreen() {
                 <ThemedText style={styles.infoText}>{contact.address}</ThemedText>
               </View>
             )}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>
+            Status & Progress
+          </ThemedText>
+
+          <View
+            style={[
+              styles.infoCard,
+              {
+                backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
+              },
+            ]}>
+            <View style={styles.infoCardRow}>
+              <ThemedText style={styles.infoCardLabel}>Status</ThemedText>
+              {updating ? (
+                <ActivityIndicator size="small" color={Colors[colorScheme ?? 'light'].tint} />
+              ) : (
+                <StatusPicker
+                  value={contact.status || 'interested'}
+                  onChange={handleStatusChange}
+                />
+              )}
+            </View>
+
+            <View style={styles.infoCardRow}>
+              <ThemedText style={styles.infoCardLabel}>Progress</ThemedText>
+              {updating ? (
+                <ActivityIndicator size="small" color={Colors[colorScheme ?? 'light'].tint} />
+              ) : (
+                <ProgressIndicator
+                  progress={contact.progress || 0}
+                  onChange={handleProgressChange}
+                  editable={true}
+                />
+              )}
+            </View>
+
+            <View style={styles.infoCardRow}>
+              <ThemedText style={styles.infoCardLabel}>Baptism Date</ThemedText>
+              {updating ? (
+                <ActivityIndicator size="small" color={Colors[colorScheme ?? 'light'].tint} />
+              ) : (
+                <DatePicker
+                  value={contact.baptismDate ? contact.baptismDate.split('T')[0] : ''}
+                  onChange={handleBaptismDateChange}
+                />
+              )}
+            </View>
           </View>
         </View>
 
@@ -557,6 +654,19 @@ const styles = StyleSheet.create({
     marginTop: 4,
     opacity: 0.7,
     fontStyle: 'italic',
+  },
+  infoCard: {
+    padding: 16,
+    borderRadius: 8,
+    gap: 16,
+  },
+  infoCardRow: {
+    gap: 8,
+  },
+  infoCardLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    opacity: 0.8,
   },
 });
 
