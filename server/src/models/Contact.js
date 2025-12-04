@@ -12,6 +12,7 @@ const ContactSchema = new mongoose.Schema({
   gender: { type: String, enum: ['male','female','other', 'unknown'], default: 'unknown' },
   language: String,
   tags: [String],
+  status: { type: String, enum: ['interested', 'teaching', 'baptized', 'not_interested', 'member', 'other'], default: 'interested' },
   baptismDate: Date,
   progress: { type: Number, min: 0, max: 5, default: 0 }, // lessons taught 0-5
   nextAppointment: Date,

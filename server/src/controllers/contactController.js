@@ -126,7 +126,7 @@ export const updateContact = async (req, res) => {
     }
 
     // Update allowed fields
-    const allowedFields = ['firstName', 'lastName', 'phone', 'address', 'lat', 'lng', 'age', 'gender', 'language', 'tags', 'baptismDate', 'progress', 'nextAppointment', 'notesSummary'];
+    const allowedFields = ['firstName', 'lastName', 'phone', 'address', 'lat', 'lng', 'age', 'gender', 'language', 'tags', 'status', 'baptismDate', 'progress', 'nextAppointment', 'notesSummary'];
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
         contact[field] = req.body[field];

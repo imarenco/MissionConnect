@@ -16,12 +16,18 @@ import { contactsApi } from '@/services/api';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { isNotEmpty, isValidPhoneNumber } from '@/lib/validation';
+import { StatusPicker, ContactStatus } from '@/components/StatusPicker';
+import { ProgressIndicator } from '@/components/ProgressIndicator';
+import { DatePicker } from '@/components/DatePicker';
 
 export default function CreateContactScreen() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [address, setAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [status, setStatus] = useState<ContactStatus>('interested');
+  const [progress, setProgress] = useState(0);
+  const [baptismDate, setBaptismDate] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const colorScheme = useColorScheme();
@@ -56,6 +62,9 @@ export default function CreateContactScreen() {
         address: address.trim(),
         phone: phoneNumber.trim(),
         phoneNumber: phoneNumber.trim(),
+        status,
+        progress,
+        baptismDate: baptismDate || undefined,
       });
       // Reset loading state before navigation
       setLoading(false);
@@ -161,6 +170,31 @@ export default function CreateContactScreen() {
               onChangeText={setAddress}
               multiline
               numberOfLines={3}
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <StatusPicker
+              value={status}
+              onChange={setStatus}
+              label="Status"
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <ThemedText style={styles.label}>Progress (Lessons Taught)</ThemedText>
+            <ProgressIndicator
+              progress={progress}
+              onChange={setProgress}
+              editable={true}
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <DatePicker
+              value={baptismDate}
+              onChange={setBaptismDate}
+              label="Baptism Date (Optional)"
             />
           </View>
         </View>

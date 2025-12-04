@@ -37,6 +37,9 @@ export interface Contact {
   lng?: number;
   owner?: string;
   missionary?: string;
+  status?: 'interested' | 'teaching' | 'baptized' | 'not_interested' | 'member' | 'other';
+  progress?: number; // 0-5 lessons taught
+  baptismDate?: string; // ISO date string
   createdAt?: string;
   updatedAt?: string;
 }
@@ -263,7 +266,7 @@ export const contactsApi = {
   },
 
   create: async (contact: Omit<Contact, '_id' | 'id'>): Promise<Contact> => {
-    const payload = {
+    const payload: any = {
       firstName: contact.firstName,
       lastName: contact.lastName,
       address: contact.address,
@@ -271,6 +274,9 @@ export const contactsApi = {
       lat: contact.lat,
       lng: contact.lng,
     };
+    if (contact.status !== undefined) payload.status = contact.status;
+    if (contact.progress !== undefined) payload.progress = contact.progress;
+    if (contact.baptismDate !== undefined) payload.baptismDate = contact.baptismDate;
 
     const created = await apiRequest<any>('/contacts', {
       method: 'POST',
@@ -289,6 +295,9 @@ export const contactsApi = {
     if (updates.phone !== undefined) payload.phone = updates.phone;
     if (updates.lat !== undefined) payload.lat = updates.lat;
     if (updates.lng !== undefined) payload.lng = updates.lng;
+    if (updates.status !== undefined) payload.status = updates.status;
+    if (updates.progress !== undefined) payload.progress = updates.progress;
+    if (updates.baptismDate !== undefined) payload.baptismDate = updates.baptismDate;
 
     const updated = await apiRequest<any>(`/contacts/${id}`, {
       method: 'PUT',
