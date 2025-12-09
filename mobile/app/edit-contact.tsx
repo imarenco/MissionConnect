@@ -12,22 +12,16 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { contactsApi } from '@/services/api';
+import { contactsApi, Contact } from '@/services/api';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { isNotEmpty, isValidPhoneNumber, isValidAddress } from '@/lib/validation';
-import { StatusPicker, ContactStatus } from '@/components/StatusPicker';
-import { ProgressIndicator } from '@/components/ProgressIndicator';
-import { DatePicker } from '@/components/DatePicker';
 
 export default function EditContactScreen() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [address, setAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [status, setStatus] = useState<ContactStatus>('interested');
-  const [progress, setProgress] = useState(0);
-  const [baptismDate, setBaptismDate] = useState('');
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const router = useRouter();
@@ -38,7 +32,6 @@ export default function EditContactScreen() {
     if (id) {
       loadContact();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const loadContact = async () => {
@@ -51,9 +44,6 @@ export default function EditContactScreen() {
         setLastName(contact.lastName);
         setAddress(contact.address || '');
         setPhoneNumber(contact.phoneNumber || contact.phone || '');
-        setStatus(contact.status || 'interested');
-        setProgress(contact.progress || 0);
-        setBaptismDate(contact.baptismDate ? contact.baptismDate.split('T')[0] : '');
       }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to load contact');
@@ -106,9 +96,6 @@ export default function EditContactScreen() {
         address: address.trim(),
         phone: phoneNumber.trim(),
         phoneNumber: phoneNumber.trim(),
-        status,
-        progress,
-        baptismDate: baptismDate || undefined,
       });
       setLoading(false);
       router.back();
@@ -231,31 +218,6 @@ export default function EditContactScreen() {
                 Optional - but required for map display. Example: '123 Main St, Provo, UT'
               </ThemedText>
             )}
-          </View>
-
-          <View style={styles.inputContainer}>
-            <StatusPicker
-              value={status}
-              onChange={setStatus}
-              label="Status"
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <ThemedText style={styles.label}>Progress (Lessons Taught)</ThemedText>
-            <ProgressIndicator
-              progress={progress}
-              onChange={setProgress}
-              editable={true}
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <DatePicker
-              value={baptismDate}
-              onChange={setBaptismDate}
-              label="Baptism Date (Optional)"
-            />
           </View>
         </View>
       </ScrollView>

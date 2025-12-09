@@ -149,7 +149,13 @@ export default function ContactsScreen() {
 
   const getContactVisits = (contact: Contact) => {
     const contactId = contact.id || contact._id;
-    return allVisits.filter(visit => visit.contactId === contactId);
+    // Only count future visits (scheduled visits)
+    return allVisits.filter(visit => {
+      if (visit.contactId !== contactId) return false;
+      if (!visit.date || !visit.time) return false;
+      const visitDateTime = new Date(`${visit.date}T${visit.time}`);
+      return visitDateTime >= new Date();
+    });
   };
 
   const handleShowVisits = (contact: Contact) => {

@@ -143,6 +143,45 @@ export default function ContactDetailScreen() {
     }
   };
 
+  const handleUpdateVisitStatus = async (visit: Visit, newStatus: string) => {
+    const visitId = visit.id || visit._id;
+    if (!visitId) {
+      Alert.alert('Error', 'Visit ID not found');
+      return;
+    }
+
+    try {
+      await visitsApi.update(visitId, {
+        status: newStatus as 'scheduled' | 'successful' | 'unable_to_contact' | 'rescheduled',
+      } as any);
+      await loadVisits();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to update visit status');
+    }
+  };
+
+  const getVisitStatusIcon = (status?: string) => {
+    switch (status) {
+      case 'successful':
+        return { icon: 'checkmark.circle.fill', color: '#34C759' };
+      case 'unable_to_contact':
+        return { icon: 'xmark.circle.fill', color: '#FF3B30' };
+      case 'rescheduled':
+        return { icon: 'arrow.clockwise.circle.fill', color: '#FF9500' };
+      default:
+        return { icon: 'clock.fill', color: '#0A7EA4' };
+    }
+  };
+
+  const isPastVisit = (visit: Visit) => {
+    if (!visit.date || !visit.time) return false;
+    const visitDateTime = new Date(`${visit.date}T${visit.time}`);
+    return visitDateTime < new Date();
+  };
+
+  const scheduledVisits = visits.filter(v => !isPastVisit(v));
+  const pastVisits = visits.filter(v => isPastVisit(v));
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -417,31 +456,43 @@ export default function ContactDetailScreen() {
             Scheduled Visits
           </ThemedText>
 
-          {visits.length > 0 ? (
+          {scheduledVisits.length > 0 ? (
             <FlatList
-              data={visits}
+              data={scheduledVisits}
               renderItem={({ item }) => (
-                <View
+                <TouchableOpacity
+                  onPress={() => {
+                    const visitId = item.id || item._id;
+                    if (visitId) {
+                      router.push(`/edit-visit?id=${visitId}&contact=${encodeURIComponent(contact.firstName + ' ' + contact.lastName)}`);
+                    }
+                  }}
                   style={[
                     styles.visitItem,
                     {
                       backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
                     },
                   ]}>
                   <View style={styles.visitContent}>
-                  <View style={styles.visitHeader}>
-                    <ThemedText style={styles.visitDate}>
-                      {item.date ? formatDateOnly(item.date) : 'No date'}
-                    </ThemedText>
-                    <ThemedText style={styles.visitTime}>
-                      {item.time ? formatTime(item.time) : 'No time'}
-                    </ThemedText>
-                  </View>
+                    <View style={styles.visitHeader}>
+                      <ThemedText style={styles.visitDate}>
+                        {item.date ? formatDateOnly(item.date) : 'No date'}
+                      </ThemedText>
+                      <ThemedText style={styles.visitTime}>
+                        {item.time ? formatTime(item.time) : 'No time'}
+                      </ThemedText>
+                    </View>
                     {item.notes && (
                       <ThemedText style={styles.visitNotes}>{item.notes}</ThemedText>
                     )}
                   </View>
-                </View>
+                  <View style={styles.editVisitButton}>
+                    <IconSymbol name="pencil" size={18} color={Colors[colorScheme ?? 'light'].tint} />
+                  </View>
+                </TouchableOpacity>
               )}
               keyExtractor={(item) => item.id || item._id || Math.random().toString()}
               scrollEnabled={false}
@@ -452,6 +503,78 @@ export default function ContactDetailScreen() {
             </View>
           )}
         </View>
+
+        {pastVisits.length > 0 && (
+          <View style={styles.section}>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>
+              Past Visits
+            </ThemedText>
+
+            <FlatList
+              data={pastVisits}
+              renderItem={({ item }) => {
+                const statusIcon = getVisitStatusIcon(item.status);
+                return (
+                  <TouchableOpacity
+                    onLongPress={() => {
+                      Alert.alert(
+                        'Visit Status',
+                        'Mark this visit as:',
+                        [
+                          {
+                            text: '✓ Successful',
+                            onPress: () => handleUpdateVisitStatus(item, 'successful'),
+                          },
+                          {
+                            text: '✗ Unable to Contact',
+                            onPress: () => handleUpdateVisitStatus(item, 'unable_to_contact'),
+                          },
+                          {
+                            text: '↻ Rescheduled',
+                            onPress: () => handleUpdateVisitStatus(item, 'rescheduled'),
+                          },
+                          { text: 'Cancel', style: 'cancel' },
+                        ]
+                      );
+                    }}
+                    style={[
+                      styles.pastVisitItem,
+                      {
+                        backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
+                      },
+                    ]}>
+                    <View style={styles.visitContent}>
+                      <View style={styles.visitHeader}>
+                        <ThemedText style={styles.visitDate}>
+                          {item.date ? formatDateOnly(item.date) : 'No date'}
+                        </ThemedText>
+                        <ThemedText style={styles.visitTime}>
+                          {item.time ? formatTime(item.time) : 'No time'}
+                        </ThemedText>
+                      </View>
+                      {item.notes && (
+                        <ThemedText style={styles.visitNotes}>{item.notes}</ThemedText>
+                      )}
+                    </View>
+                    <View style={styles.visitStatusIcon}>
+                      <IconSymbol 
+                        name={statusIcon.icon as any} 
+                        size={24} 
+                        color={statusIcon.color} 
+                      />
+                    </View>
+                  </TouchableOpacity>
+                );
+              }}
+              keyExtractor={(item) => item.id || item._id || Math.random().toString()}
+              scrollEnabled={false}
+            />
+
+            <ThemedText style={styles.pastVisitsHint}>
+              Tap and hold on a past visit to mark its status
+            </ThemedText>
+          </View>
+        )}
 
         {/* -------------------- New Location Section -------------------- */}
 
@@ -632,8 +755,35 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 12,
   },
+  pastVisitItem: {
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  editVisitButton: {
+    padding: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 12,
+  },
+  visitStatusIcon: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingLeft: 12,
+  },
+  pastVisitsHint: {
+    fontSize: 12,
+    opacity: 0.6,
+    marginTop: 8,
+    fontStyle: 'italic',
+    textAlign: 'center',
+  },
   visitContent: {
     gap: 8,
+    flex: 1,
   },
   visitHeader: {
     flexDirection: 'row',

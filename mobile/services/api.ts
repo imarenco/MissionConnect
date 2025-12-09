@@ -67,6 +67,7 @@ export interface Visit {
   date?: string; // For compatibility
   time?: string; // For compatibility
   notes: string;
+  status?: 'scheduled' | 'successful' | 'unable_to_contact' | 'rescheduled';
   reminderScheduled?: boolean;
   createdAt?: string;
   updatedAt?: string;

@@ -68,6 +68,70 @@ export const getVisits = async (req, res) => {
   }
 };
 
+export const getVisitById = async (req, res) => {
+  try {
+    const userId = req.user?._id || req.user?.id || req.user;
+    const visitId = req.params.id;
+
+    const visit = await Visit.findOne({ _id: visitId, user: userId })
+      .populate('contact', 'firstName lastName phone')
+      .lean();
+
+    if (!visit) {
+      return res.status(404).json({ message: 'Visit not found' });
+    }
+
+    return res.status(200).json(visit);
+  } catch (error) {
+    console.error('Error getting visit:', error);
+    return res.status(500).json({ message: error.message || 'Server error' });
+  }
+};
+
+export const updateVisit = async (req, res) => {
+  try {
+    const userId = req.user?._id || req.user?.id || req.user;
+    const visitId = req.params.id;
+    const { datetime, notes, status } = req.body;
+
+    // Find the visit and ensure it belongs to the user
+    const visit = await Visit.findOne({ _id: visitId, user: userId });
+    if (!visit) {
+      return res.status(404).json({ message: 'Visit not found' });
+    }
+
+    // Update fields
+    if (datetime) {
+      const dt = new Date(datetime);
+      if (isNaN(dt.getTime())) {
+        return res.status(400).json({ message: "Invalid datetime format. Provide ISO datetime." });
+      }
+      visit.datetime = dt;
+    }
+
+    if (notes !== undefined) {
+      visit.notes = notes;
+    }
+
+    if (status !== undefined) {
+      // Validate status value
+      const validStatuses = ['scheduled', 'successful', 'unable_to_contact', 'rescheduled'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ message: "Invalid status. Must be one of: scheduled, successful, unable_to_contact, rescheduled" });
+      }
+      visit.status = status;
+    }
+
+    const updatedVisit = await visit.save();
+    await updatedVisit.populate('contact', 'firstName lastName phone');
+
+    return res.status(200).json(updatedVisit);
+  } catch (error) {
+    console.error('Error updating visit:', error);
+    return res.status(500).json({ message: error.message || 'Server error' });
+  }
+};
+
 export const deleteVisit = async (req, res) => {
   try {
     const userId = req.user?._id || req.user?.id || req.user;

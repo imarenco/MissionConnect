@@ -18,6 +18,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Calendar, DateData } from 'react-native-calendars';
 import { isFutureDate } from '@/lib/validation';
+import { TimePicker } from '@/components/TimePicker';
 
 export default function EditVisitScreen() {
   const [contactName, setContactName] = useState('');
@@ -162,18 +163,9 @@ export default function EditVisitScreen() {
             <ThemedText style={styles.label}>
               Time <ThemedText style={styles.required}>*</ThemedText>
             </ThemedText>
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5',
-                  color: Colors[colorScheme ?? 'light'].text,
-                },
-              ]}
-              placeholder="HH:MM"
-              placeholderTextColor={colorScheme === 'dark' ? '#888' : '#999'}
+            <TimePicker
               value={time}
-              onChangeText={setTime}
+              onChange={setTime}
             />
           </View>
 
